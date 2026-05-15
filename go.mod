@@ -1,6 +1,6 @@
 module github.com/NonDairyNeutrino/olycanlan
 
-go 1.26.3
+go 1.13
 
 require (
 	github.com/bwmarrin/discordgo v0.29.0 // indirect
