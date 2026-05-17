@@ -1,0 +1,4 @@
+baseURL = 'https://www.olycanlan.org/'
+locale = 'en-us'
+title = 'Olympia Canadian Highlander League'
+theme = 'ananke'

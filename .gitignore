@@ -33,3 +33,4 @@ go.work.sum
 
 # build artifacts
 olycanlan
+site/public
