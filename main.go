@@ -28,7 +28,7 @@ import (
 // 4. Update Discord scoreboard post with new and total points
 // 5. Update website scoreboard with new and total points
 
-const prefix string = "!scbot"
+const prefix string = "!skbot"
 
 func main() {
 	// start by loading things like API tokens from the .env file
@@ -75,7 +75,7 @@ func main() {
 			return
 		}
 
-		//break the message into arguments to parse the prefix command "!scbot"
+		//break the message into arguments to parse the prefix command "!skbot"
 		msg_args := strings.Split(m.Content, " ")
 
 		//does nothing if the prefix command is not the first part of the message
@@ -97,7 +97,7 @@ func main() {
 
 		//If the command is not valid through the loop it just replies with a this message instead prompting them to fix it.
 		if valid_command == false {
-			s.ChannelMessageSendReply(m.ChannelID, fmt.Sprintf("Sorry <@%v>, I don't recognize that command. Please try again or use the \"!scbot Help\" command to view a list of available commands.", m.Author.ID), m.Reference())
+			s.ChannelMessageSendReply(m.ChannelID, fmt.Sprintf("Sorry <@%v>, I don't recognize that command. Please try again or use the \"%v Help\" command to view a list of available commands.", m.Author.ID, prefix), m.Reference())
 			return
 		}
 
@@ -106,7 +106,7 @@ func main() {
 
 			//construct the embedded message from the commands list.
 			embed := &discordgo.MessageEmbed{
-				Title: "Available !scbot Commands",
+				Title: fmt.Sprintf("Available %v Commands", prefix),
 				Color: 0x00ff00, // Green color
 			}
 			for _, cmd := range commands {
