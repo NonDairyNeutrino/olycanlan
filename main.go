@@ -62,9 +62,25 @@ func main() {
 			return
 		}
 
-		// Responds to a "hello" message with a "Hello <username>!" message
+		// Responds to a "hello" message with a "Hello <username>!" message and reacts with a 🍑 emoji
 		if m.Content == "hello" {
-			s.ChannelMessageSend(m.ChannelID, "Hello "+m.Author.Username+"!")
+			s.ChannelMessageSendReply(m.ChannelID, "Hello "+m.Author.Username+"!", m.Reference())
+			s.MessageReactionAdd(m.ChannelID, m.ID, "🍑")
+			s.GuildMemberRoleAdd(m.GuildID, m.ID, "1505974853658874050")
+		}
+	})
+
+	//Handler related to adding reactions. Using as a method to sign up for the league.
+	//Will need a partner handler for removing reactions to remove roles during signup season.
+	//Maybe also a way to indicate when signup season begins and ends?
+	discord.AddHandler(func(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
+		if r.Emoji.Name == "⚔️" {
+			s.GuildMemberRoleAdd(r.GuildID, r.UserID, "1505974853658874050")
+			s.ChannelMessageSend(r.ChannelID, fmt.Sprintf(" <@%v> has been signed up as a Battler ⚔️ for this season!", r.UserID))
+		}
+		if r.Emoji.Name == "👊" {
+			s.GuildMemberRoleAdd(r.GuildID, r.UserID, "1505977716543848570")
+			s.ChannelMessageSend(r.ChannelID, fmt.Sprintf(" <@%v> has been signed up as a Jammer 👊 for this season!", r.UserID))
 		}
 	})
 
