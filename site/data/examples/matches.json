@@ -1,5 +1,5 @@
 {
-    "S06": {
+    "current_season":{
         "matches": {
             "S06-001": {
                 "winner": "Player1",
@@ -15,8 +15,17 @@
             }
         },
         "metadata": {
-            "season_start": "2024-01-01",
-            "season_end": "2024-03-31"
+            "next_match_id": 3,
+            "season_start": "",
+            "season_end": ""
         }
+    },
+    "archive": {
+        "matches": {
+            
+        }
+    }
+    "metadata": {
+        "last_updated": "2024-06-01T12:00:00Z"
     }
 }
