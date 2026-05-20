@@ -10,7 +10,6 @@ import (
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 )
 
@@ -33,11 +32,17 @@ import (
 const prefix string = "!skbot"
 
 type Match_Result struct {
-	match_id   uuid.UUID
-	winner     string
-	loser      string
-	result     string
-	match_type string
+	winner string
+	loser  string
+	result string
+	bounty bool
+}
+
+type League_Player struct {
+	discord_userid string
+	discord_name   string
+	player_type    string
+	decklist       string
 }
 
 func main() {
@@ -58,12 +63,12 @@ func main() {
 	}
 
 	// test the connection to Discord by getting information about the e.g. General channel
-	gnrl_id := os.Getenv("CHNL_ID")
-	chnl, err := discord.Channel(gnrl_id)
-	if err != nil {
-		log.Fatalln("Error getting channel id\n", err)
-	}
-	log.Println(chnl)
+	//gnrl_id := os.Getenv("CHNL_ID")
+	//chnl, err := discord.Channel(gnrl_id)
+	//if err != nil {
+	//	log.Fatalln("Error getting channel id\n", err)
+	//}
+	//log.Println(chnl)
 
 	//regex to parse only the numbers from a string (for userIDs)
 	userIDRegex := regexp.MustCompile(`[^0-9]+`)
@@ -175,6 +180,25 @@ func main() {
 		if r.Emoji.Name == "⚔️" {
 			s.GuildMemberRoleAdd(r.GuildID, r.UserID, "1505974853658874050")
 			s.ChannelMessageSend(r.ChannelID, fmt.Sprintf(" <@%v> has been signed up as a Battler ⚔️ for this season!", r.UserID))
+
+			new_signup := League_Player{
+				discord_userid: r.UserID,
+				discord_name:   r.Member.DisplayName(),
+				player_type:    "Battler",
+				decklist:       "",
+			}
+
+			fmt.Println(new_signup)
+
+			channel, err := s.UserChannelCreate(r.UserID)
+			if err != nil {
+				log.Printf("Error creating DM channel: %v\n", err)
+				return
+			}
+			s.ChannelMessageSend(channel.ID, "Thanks for signing up for this season of the Olympia Canadian Highlander league!")
+			s.ChannelMessageSend(channel.ID, "Please message me a link to your decklist on Moxfield or anoter deck hosting site.")
+
+			// Something here to capture responses. I think that might have to be above too, since its triggered by a message...
 		}
 		if r.Emoji.Name == "👊" {
 			s.GuildMemberRoleAdd(r.GuildID, r.UserID, "1505977716543848570")
@@ -236,13 +260,10 @@ func main() {
 
 			//Construct the match_result struct.
 			match_result := Match_Result{
-				//Currently assigns a UUID to the match, but likely not super necessary. Id like to have some ID system to check for duplicates (both players reporting for example)
-				match_id: uuid.New(),
-				winner:   "",
-				loser:    "",
-				result:   "",
-				//Currently just parses match_type directly from the message. Probably want to filter/format it cleanly.
-				match_type: msg_args[4],
+				winner: "",
+				loser:  "",
+				result: "",
+				bounty: false,
 			}
 
 			//Logic to parse the winner and loser based on the game results of the match.
@@ -258,9 +279,14 @@ func main() {
 				match_result.result = fmt.Sprintf("%v-%v", result_split[1], result_split[0])
 			}
 
+			//Logic to determine if the match was bounty. Default is false.
+			if msg_args[4] == "Bounty" {
+				match_result.bounty = true
+			}
+
 			//construct the embedded message from the match result.
 			embed := &discordgo.MessageEmbed{
-				Title: fmt.Sprintf("%v Match Result Recorded", match_result.match_type),
+				Title: "Match Result Recorded",
 				Fields: []*discordgo.MessageEmbedField{
 					{
 						Name:   match_result.result,
@@ -269,7 +295,7 @@ func main() {
 					},
 				},
 				Footer: &discordgo.MessageEmbedFooter{
-					Text: fmt.Sprintf("Match ID: %v", match_result.match_id),
+					Text: fmt.Sprintf("Bounty: %v", match_result.bounty),
 				},
 				Color: 0xD80621, // Canadian Flag Red 🍁
 			}
