@@ -15,22 +15,17 @@
 </head>
 
 <table class="sortable">
-
-    <thead>
-        <tr data-sort-method="none">
-            <th>Player</th>
-            <th>Points</th>
-            <th>Record</th>
-        </tr>
-    </thead>
+    <tr>
+        <th>Player</th>
+        <th>Points</th>
+        <th>Record</th>
+    </tr>
     
-    <tbody>
-        {{ range .Site.Data.players.S06.battlers }}
-        <tr>
-            <th>{{.discord_nickname}}</th>
-            <th>{{.points}}</th>
-            <th>{{.league_record}}</th>
-        </tr>
-        {{end}}
-    </tbody>
+    {{ range .Site.Data.players.S06.battlers }}
+    <tr>
+        <td>{{.discord_nickname}}</td>
+        <td>{{.points}}</td>
+        <td>{{.league_record}}</td>
+    </tr>
+    {{end}}
 </table>
