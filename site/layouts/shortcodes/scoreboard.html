@@ -4,9 +4,11 @@
         <th>Points</th>
         <th>Record</th>
     </tr>
+    {{ range .Site.Data.players.S06.battlers }}
     <tr>
-        <th>Curie(ous)</th>
-        <th>25</th>
-        <th>3-0</th>
+        <th>{{.discord_nickname}}<th>
+        <th>{{.points}}</th>
+        <th>{{.league_record}}</th>
     </tr>
+    {{end}}
 </table>
