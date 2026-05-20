@@ -1,0 +1,69 @@
+{
+    "S06": {
+        "battlers": {
+            "162114243557195776": {
+                "discord_nickname": "Curie(ous)",
+                "decklist": {
+                    "url": "moxfield.com/deck/1a2b3c4d5e6f7g8h9i0j",
+                    "approved": true
+                },
+                "league_record": "2-1",
+                "league_game_record": "5-2",
+                "points": "5",
+                "historical_record": "10-5"
+            },
+            "USERID12356323423": {
+                "discord_nickname": "Curie(ous)",
+                "decklist": {
+                    "url": "moxfield.com/deck/1a2b3c4d5e6f7g8h9i0j",
+                    "approved": true
+                },
+                "league_record": "2-1",
+                "league_game_record": "5-2",
+                "points": "5",
+                "historical_record": "10-5"
+            }
+        },
+        "jammers": {
+            "USERID12356323423": {
+                "discord_nickname": "Curie(ous)",
+                "decklist": {
+                    "url": "moxfield.com/deck/1a2b3c4d5e6f7g8h9i0j",
+                    "approved": true
+                },
+                "league_record": "2-1",
+                "league_game_record": "5-2",
+                "points": "5",
+                "historical_record": "10-5"
+            },
+            "USERID12356323427": {
+                "discord_nickname": "Curie(ous)",
+                "decklist": {
+                    "url": "moxfield.com/deck/1a2b3c4d5e6f7g8h9i0j",
+                    "approved": true
+                },
+                "league_record": "2-1",
+                "league_game_record": "5-2",
+                "points": "5",
+                "historical_record": "10-5"
+            }
+        },
+        "metadata": {
+            "rounds": "3",
+            "current_round": "1",
+            "number_of_players": 20
+        }
+    },
+    "inactive": {
+        "USERID12356323423": {
+            "discord_nickname": "Curie(ous)",
+            "last_decklist": "moxfield.com/deck/1a2b3c4d5e6f7g8h9i0j",
+            "historical_record": "4-13"
+        },
+        "USERID12356323427": {
+            "discord_nickname": "Curie(ous)",
+            "last_decklist": "moxfield.com/deck/1a2b3c4d5e6f7g8h9i0j",
+            "historical_record": "18-3"
+        }
+    }
+}

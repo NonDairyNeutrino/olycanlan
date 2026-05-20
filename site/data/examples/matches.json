@@ -1,0 +1,22 @@
+{
+    "S06": {
+        "matches": {
+            "S06-001": {
+                "winner": "Player1",
+                "loser": "Player2",
+                "result": "2-1",
+                "bounty": true
+            },
+            "S06-002": {
+                "winner": "Player3",
+                "loser": "Player4",
+                "result": "3-0",
+                "bounty": false
+            }
+        },
+        "metadata": {
+            "season_start": "2024-01-01",
+            "season_end": "2024-03-31"
+        }
+    }
+}
