@@ -1,30 +1,36 @@
-<style>
-table {
-  border-collapse: collapse;
-  width: 100%;
-}
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tablesort/5.1.0/tablesort.min.js"></script>
+    <style>
+        table {
+        border-collapse: collapse;
+        width: 100%;
+        }
 
-tr {
-  border-bottom: 1px solid #818181;
-}
+        tr {
+        border-bottom: 1px solid #818181;
+        }
 
-tr:hover {background-color: #9bbea0;}
-</style>
-
-
+        tr:hover {background-color: #9bbea0;}
+    </style>
+</head>
 
 <table>
-    <tr>
-        <th>Player</th>
-        <th>Points</th>
-        <th>Record</th>
-    </tr>
-    {{ range .Site.Data.players.S06.battlers }}
-    <tr>
-        <th>{{.discord_nickname}}</th>
-        <th>{{.points}}</th>
-        <th>{{.league_record}}</th>
-        <th><a href={{.decklist.url}}>decklist</a></th>
-    </tr>
-    {{end}}
+    
+    <thead>
+        <tr data-sort-method="none">
+            <th>Player</th>
+            <th>Points</th>
+            <th>Record</th>
+        </tr>
+    </thead>
+    
+    <tbody>
+        {{ range .Site.Data.players.S06.battlers }}
+        <tr>
+            <th>{{.discord_nickname}}</th>
+            <th>{{.points}}</th>
+            <th>{{.league_record}}</th>
+        </tr>
+        {{end}}
+    </tbody>
 </table>
