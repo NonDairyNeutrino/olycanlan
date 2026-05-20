@@ -1,4 +1,19 @@
-<table style="width:100%">
+<style>
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+tr {
+  border-bottom: 1px solid #818181;
+}
+
+tr:hover {background-color: #9bbea0;}
+</style>
+
+
+
+<table>
     <tr>
         <th>Player</th>
         <th>Points</th>
@@ -6,9 +21,10 @@
     </tr>
     {{ range .Site.Data.players.S06.battlers }}
     <tr>
-        <th>{{.discord_nickname}}<th>
+        <th>{{.discord_nickname}}</th>
         <th>{{.points}}</th>
         <th>{{.league_record}}</th>
+        <th><a href={{.decklist.url}}>decklist</a></th>
     </tr>
     {{end}}
 </table>
