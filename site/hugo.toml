@@ -2,3 +2,15 @@ baseURL = 'https://www.olycanlan.org/'
 locale = 'en-us'
 title = 'Olympia Canadian Highlander League'
 theme = 'ananke'
+
+[menu]
+    [[menu.main]]
+        identifier = "home"
+        name = "Home"
+        url = "/"
+        weight = 1
+    [[menu.main]]
+        identifier = "about"
+        name = "About"
+        url = "/about/"
+        weight = 2
