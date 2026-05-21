@@ -47,6 +47,34 @@ type League_Player struct {
 	decklist       string
 }
 
+// slash command global variable
+var commands = []*discordgo.ApplicationCommand{
+	{
+		Name:        "ping",
+		Description: "Replies with Pong!",
+	},
+}
+
+func registerCommands(s *discordgo.Session) {
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalln("Error loading enironment variables:", err)
+	}
+
+	for _, cmd := range commands {
+		_, err := s.ApplicationCommandCreate(
+			s.State.User.ID,
+			os.Getenv("GUILD_ID"), // <- empty to create a global command (GPT)
+			cmd,
+		)
+
+		if err != nil {
+			log.Printf("Cannot create comand %s: %v", cmd.Name, err)
+		}
+	}
+}
+
 func main() {
 	// start by loading things like API tokens from the .env file
 	err := godotenv.Load()
@@ -76,9 +104,37 @@ func main() {
 	userIDRegex := regexp.MustCompile(`[^0-9]+`)
 
 	//---------------------------------------------------------------------//
+	//TESTING GROUNDS
 
+	//Slash command handler
+	discord.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		//Ensures its a slash command
+		if i.Type != discordgo.InteractionApplicationCommand {
+			return
+		}
+
+		switch i.ApplicationCommandData().Name {
+		case "ping":
+
+			err := s.InteractionRespond(
+				i.Interaction,
+				&discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "Pong!",
+					},
+				},
+			)
+
+			if err != nil {
+				log.Println(err)
+			}
+		}
+	})
+
+	//---------------------------------------------------------------------//
 	//List of commands and descriptions. Calls to this string array when interpreting a message, so add it to here first then use logic from the array (see others)
-	commands := [][]string{
+	prefix_commands := [][]string{
 		{"Help", "Provides a list of available commands and their descriptions"},
 		{"Hello", "Responds to a 'Hello' message and reacts with a 🍑 emoji"},
 		{"Points", "Provides a link to the current canlander points list"},
@@ -109,8 +165,8 @@ func main() {
 		//determines if the command is valid by checking if command_content matches the first column of the commands array
 		//dont like using "i" here, but idk....
 		valid_command := false
-		for cmd := range commands {
-			if command_content == commands[cmd][0] {
+		for cmd := range prefix_commands {
+			if command_content == prefix_commands[cmd][0] {
 				valid_command = true
 			}
 		}
@@ -122,14 +178,14 @@ func main() {
 		}
 
 		//Responds to a "help" message with an embedded message listing the available commands and their descriptions
-		if command_content == commands[0][0] { //help
+		if command_content == prefix_commands[0][0] { //help
 
 			//construct the embedded message from the commands list.
 			embed := &discordgo.MessageEmbed{
 				Title: fmt.Sprintf("Available %v Commands", prefix),
 				Color: 0xD80621, // Canadian Flag Red 🍁
 			}
-			for _, cmd := range commands {
+			for _, cmd := range prefix_commands {
 				embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 					Name:   cmd[0],
 					Value:  cmd[1],
@@ -141,20 +197,20 @@ func main() {
 		}
 
 		// Responds to a "hello" message with a "Hello <username>!" message and reacts with a 🍑 emoji
-		if command_content == commands[1][0] { //hello
+		if command_content == prefix_commands[1][0] { //hello
 			s.ChannelMessageSendReply(m.ChannelID, fmt.Sprintf("Hello <@%v>!", m.Author.ID), m.Reference())
 			s.MessageReactionAdd(m.ChannelID, m.ID, "🍑")
 			return
 		}
 
 		// Responds to the "points" command with link to the current canlander points list
-		if command_content == commands[2][0] { //points
+		if command_content == prefix_commands[2][0] { //points
 			s.ChannelMessageSendReply(m.ChannelID, "Here is the current canlander points list: <https://canadianhighlander.ca/points-list/>. Happy brewing!", m.Reference())
 			return
 		}
 
 		// Responds to the "scoreboard" command with link to the current website scoreboard and league standings
-		if command_content == commands[3][0] { //scoreboard
+		if command_content == prefix_commands[3][0] { //scoreboard
 			s.ChannelMessageSendReply(m.ChannelID, "You can view the current scoreboard and league standings on the bot website: <https://bot.olycanlan.org/>", m.Reference())
 			return
 		}
@@ -198,6 +254,8 @@ func main() {
 				player_type:    "Battler",
 				decklist:       "",
 			}
+
+			fmt.Println(new_signup)
 
 			channel, err := s.UserChannelCreate(r.UserID)
 			if err != nil {
@@ -411,6 +469,8 @@ func main() {
 		log.Fatalln(err)
 	}
 	defer discord.Close()
+
+	registerCommands(discord)
 
 	//Terminal print indicating the bot is running
 	fmt.Println("Bot is running")
