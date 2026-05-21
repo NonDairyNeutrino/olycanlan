@@ -50,14 +50,12 @@ type League_Player struct {
 // slash command global variable
 var commands = []*discordgo.ApplicationCommand{
 	//Tester little ping pong command
-	{
-		Name:        "ping",
+	{Name: "ping",
 		Description: "Replies with Pong!",
 	},
 
 	//Result command for reporting matches
-	{
-		Name:        "result",
+	{Name: "result",
 		Description: "Record a match result",
 
 		Options: []*discordgo.ApplicationCommandOption{
@@ -101,8 +99,33 @@ var commands = []*discordgo.ApplicationCommand{
 			},
 		},
 	},
+
+	//Signup (battler, jammer, open, close)
+	{
+		Name:        "signup",
+		Description: "League signup commands",
+
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Name:        "battler",
+				Description: "Sign up as a Battler ⚔️",
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Name:        "jammer",
+				Description: "Sign up as a Jammer 👊",
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Name:        "drop",
+				Description: "Drop from the current league season",
+			},
+		},
+	},
 }
 
+// function to register slash commands, done as essentially last step.
 func registerCommands(s *discordgo.Session) {
 
 	err := godotenv.Load()
@@ -140,21 +163,14 @@ func main() {
 		log.Println("Discord sucessfully connected.")
 	}
 
-	// test the connection to Discord by getting information about the e.g. General channel
-	//gnrl_id := os.Getenv("CHNL_ID")
-	//chnl, err := discord.Channel(gnrl_id)
-	//if err != nil {
-	//	log.Fatalln("Error getting channel id\n", err)
-	//}
-	//log.Println(chnl)
-
 	//regex to parse only the numbers from a string (for userIDs)
 	userIDRegex := regexp.MustCompile(`[^0-9]+`)
 
 	//---------------------------------------------------------------------//
-	//TESTING GROUNDS
+	//SLASH COMMAND TESTING GROUNDS
 
-	//Slash command handler
+	//Slash command handler.
+	// Add new slash commands as new case: "command"
 	discord.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		//Ensures its a slash command
 		if i.Type != discordgo.InteractionApplicationCommand {
@@ -177,16 +193,6 @@ func main() {
 			if err != nil {
 				log.Println(err)
 			}
-		}
-	})
-
-	discord.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		//Ensures its a slash command
-		if i.Type != discordgo.InteractionApplicationCommand {
-			return
-		}
-
-		switch i.ApplicationCommandData().Name {
 		case "result":
 
 			//gathers the options
@@ -323,7 +329,123 @@ func main() {
 					},
 				},
 			)
+		case "signup":
+			sub := i.ApplicationCommandData().Options[0].Name
+			switch sub {
+			// /signup battler
+			case "battler":
+				//Read metadata for if league signups are open
+				metadataJson, err := os.ReadFile("site/data/metadata.json")
+				if err != nil {
+					log.Println(err)
+					return
+				}
 
+				var metadata map[string]interface{}
+
+				err = json.Unmarshal(metadataJson, &metadata)
+				if err != nil {
+					log.Println(err)
+					return
+				}
+
+				signupStatus := metadata["current_season"].(map[string]interface{})["signups"].(bool)
+
+				if !signupStatus {
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: "Signups are currently closed for this season. Please use `/signup jammer` if you are interested in joining as a Jammer 👊.",
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+
+				guildMember, _ := s.GuildMember(i.GuildID, i.Member.User.ID)
+
+				//check current roles. If already a battler, let them know they are signed up. If they are a jammer, remove the jammer role
+				for _, r := range guildMember.Roles {
+					if r == os.Getenv("BATTLER_ID") {
+						//Already signed up!
+						s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Content: "You are already signed up as a Battler ⚔️ for this season.\n*If you would like to change roles to a Jammer 👊 you can use the `/signup jammer` command.*",
+								Flags:   discordgo.MessageFlagsEphemeral,
+							},
+						})
+						return
+					}
+					if r == os.Getenv("JAMMER_ID") {
+						s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, os.Getenv("JAMMER_ID"))
+					}
+				}
+
+				//Add battler role
+				s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, os.Getenv("BATTLER_ID"))
+				//Respond with an ephemeral message
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "Thanks for signing up as a Battler ⚔️ for this season!\n**Please use the `/signup decklist` command to provide your decklist before the season starts.**",
+						Flags:   discordgo.MessageFlagsEphemeral,
+					},
+				})
+			// /signup jammer
+			case "jammer":
+
+				guildMember, _ := s.GuildMember(i.GuildID, i.Member.User.ID)
+
+				//check current roles. If already a jammer, let them know they are signed up. If they are a battler, remove the battler role
+				for _, r := range guildMember.Roles {
+					if r == os.Getenv("JAMMER_ID") {
+						//Already signed up!
+						s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Content: "You are already signed up as a Jammer 👊 for this season.\n*If you would like to change roles to a Battler ⚔️ and signups are currently open you can use the `/signup battler` command.*",
+								Flags:   discordgo.MessageFlagsEphemeral,
+							},
+						})
+						return
+					}
+					if r == os.Getenv("BATTLER_ID") {
+						s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, os.Getenv("BATTLER_ID"))
+					}
+				}
+
+				//Add jammer role
+				s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, os.Getenv("JAMMER_ID"))
+				//Respond with an ephemeral message
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "Thanks for signing up as a Jammer 👊 for this season!",
+						Flags:   discordgo.MessageFlagsEphemeral,
+					},
+				})
+			//signup drop
+			case "drop":
+
+				guildMember, _ := s.GuildMember(i.GuildID, i.Member.User.ID)
+
+				//check current roles. If not already a jammer or battler do nothing.
+				for _, r := range guildMember.Roles {
+					if r == os.Getenv("JAMMER_ID") || r == os.Getenv("BATTLER_ID") {
+						//Currently signed up
+						//Remove role
+						s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, r)
+						s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Content: "You have been dropped from the current league season. Hope you can join us in the future!",
+								Flags:   discordgo.MessageFlagsEphemeral,
+							},
+						})
+					}
+				}
+			}
 		}
 	})
 
