@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -282,6 +283,84 @@ func main() {
 			//Logic to determine if the match was bounty. Default is false.
 			if msg_args[4] == "Bounty" {
 				match_result.bounty = true
+			}
+
+			//Read matches.json
+			matches_json, err := os.ReadFile("site/data/matches.json")
+			if err != nil {
+				log.Printf("Error reading matches.json: %v\n", err)
+				return
+			}
+
+			var matches_data map[string]interface{}
+
+			err = json.Unmarshal(matches_json, &matches_data)
+			if err != nil {
+				log.Printf("Error unmarshalling matches.json: %v\n", err)
+				return
+			}
+
+			//Read metadata.json
+			metadata_json, err := os.ReadFile("site/data/metadata.json")
+			if err != nil {
+				log.Printf("Error reading metadata.json: %v\n", err)
+				return
+			}
+
+			var metadata map[string]interface{}
+
+			err = json.Unmarshal(metadata_json, &metadata)
+			if err != nil {
+				log.Printf("Error unmarshalling metadata.json: %v\n", err)
+				return
+			}
+
+			//Get season number & make prefix
+			current_season := int(metadata["current_season"].(map[string]interface{})["season"].(float64))
+			season_prefix := fmt.Sprintf("S%02d", current_season)
+
+			//Read current season matches & metadata
+			current_season_matches := matches_data["current_season"].(map[string]interface{})["matches"].(map[string]interface{})
+
+			current_season_metadata := matches_data["current_season"].(map[string]interface{})["metadata"].(map[string]interface{})
+
+			//construct the next match id of form S06-001
+			next_match_id := int(current_season_metadata["next_match_id"].(float64))
+			new_match_id := fmt.Sprintf("%s-%03d",
+				season_prefix,
+				next_match_id)
+
+			//add the new match result to the json data
+			current_season_matches[new_match_id] = map[string]interface{}{
+				"winner": match_result.winner,
+				"loser":  match_result.loser,
+				"result": match_result.result,
+				"bounty": match_result.bounty,
+			}
+
+			//increment next_match_id
+			current_season_metadata["next_match_id"] = next_match_id + 1
+
+			//Write back to the JSON data
+			updated_matches_json, err := json.MarshalIndent(
+				matches_data,
+				"",
+				"    ",
+			)
+			if err != nil {
+				log.Printf("Error Marshalling Updated Matches Data: %v\n", err)
+				return
+			}
+
+			err = os.WriteFile(
+				"site/data/matches.json",
+				updated_matches_json,
+				0644,
+			)
+
+			if err != nil {
+				log.Printf("Error writing matches.json: %v\n", err)
+				return
 			}
 
 			//construct the embedded message from the match result.
