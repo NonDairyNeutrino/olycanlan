@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
@@ -179,6 +180,15 @@ func main() {
 		}
 
 		if r.Emoji.Name == "⚔️" {
+
+			//When someone signs up as a "battler"...
+			// First we have to check if that player has participated in previous leagues (likely)
+			// IF THEY ARE NEW. Gather info about them for players.json (League_Player struct)
+			// IF THEY HAVE PARTICIPATED PREVIOUSLY. Update their discord_name. Grab their last decklist link.
+			// Add them to the "battler" section of the players.json, copying their relevant info if they participated previously
+			// Add the current battler role
+			// DM the player with a notice they have signed up and request they DM the bot their decklist. If participated previously we can include their last known deck link.
+
 			s.GuildMemberRoleAdd(r.GuildID, r.UserID, "1505974853658874050")
 			s.ChannelMessageSend(r.ChannelID, fmt.Sprintf(" <@%v> has been signed up as a Battler ⚔️ for this season!", r.UserID))
 
@@ -189,14 +199,12 @@ func main() {
 				decklist:       "",
 			}
 
-			fmt.Println(new_signup)
-
 			channel, err := s.UserChannelCreate(r.UserID)
 			if err != nil {
 				log.Printf("Error creating DM channel: %v\n", err)
 				return
 			}
-			s.ChannelMessageSend(channel.ID, "Thanks for signing up for this season of the Olympia Canadian Highlander league!")
+			s.ChannelMessageSend(channel.ID, "Thanks for signing up as a Battler ⚔️ for this season of the Olympia Canadian Highlander league!")
 			s.ChannelMessageSend(channel.ID, "Please message me a link to your decklist on Moxfield or anoter deck hosting site.")
 
 			// Something here to capture responses. I think that might have to be above too, since its triggered by a message...
@@ -340,6 +348,10 @@ func main() {
 
 			//increment next_match_id
 			current_season_metadata["next_match_id"] = next_match_id + 1
+
+			//Update the last update time
+			matches_data["metadata"].(map[string]interface{})["last_updated"] =
+				time.Now().UTC().Format(time.RFC3339)
 
 			//Write back to the JSON data
 			updated_matches_json, err := json.MarshalIndent(
