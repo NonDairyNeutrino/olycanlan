@@ -33,11 +33,11 @@ import (
 
 const prefix string = "!skbot"
 
-type Match_Result struct {
-	winner string
-	loser  string
-	result string
-	bounty bool
+type MatchResult struct { // this structure with capital letters apparently helps JSON parse. IDK...
+	Winner string `json:"winner"`
+	Loser  string `json:"loser"`
+	Result string `json:"result"`
+	Bounty bool   `json:"bounty"`
 }
 
 type League_Player struct {
@@ -49,9 +49,57 @@ type League_Player struct {
 
 // slash command global variable
 var commands = []*discordgo.ApplicationCommand{
+	//Tester little ping pong command
 	{
 		Name:        "ping",
 		Description: "Replies with Pong!",
+	},
+
+	//Result command for reporting matches
+	{
+		Name:        "result",
+		Description: "Record a match result",
+
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionUser,
+				Name:        "winner",
+				Description: "Winning Player",
+				Required:    true,
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionUser,
+				Name:        "loser",
+				Description: "Losing Player",
+				Required:    true,
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionString,
+				Name:        "result",
+				Description: "Match Result",
+				Required:    true,
+				Choices: []*discordgo.ApplicationCommandOptionChoice{
+					{
+						Name:  "3-0",
+						Value: "3-0",
+					},
+					{
+						Name:  "2-1",
+						Value: "2-1",
+					},
+					{
+						Name:  "Concession",
+						Value: "0-0",
+					},
+				},
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionBoolean,
+				Name:        "bounty",
+				Description: "Was this a bounty match?",
+				Required:    true,
+			},
+		},
 	},
 }
 
@@ -129,6 +177,153 @@ func main() {
 			if err != nil {
 				log.Println(err)
 			}
+		}
+	})
+
+	discord.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		//Ensures its a slash command
+		if i.Type != discordgo.InteractionApplicationCommand {
+			return
+		}
+
+		switch i.ApplicationCommandData().Name {
+		case "result":
+
+			//gathers the options
+			options := i.ApplicationCommandData().Options
+
+			//establish the variables from the command
+			var winner *discordgo.User
+			var loser *discordgo.User
+			var result string
+			var bounty bool
+
+			for _, opt := range options {
+				switch opt.Name {
+				case "winner":
+					winner = opt.UserValue(s)
+				case "loser":
+					loser = opt.UserValue(s)
+				case "result":
+					result = string(opt.StringValue())
+				case "bounty":
+					bounty = opt.BoolValue()
+				}
+			}
+
+			matchResultReport := MatchResult{
+				Winner: winner.ID,
+				Loser:  loser.ID,
+				Result: result,
+				Bounty: bounty,
+			}
+
+			//Read matches.json
+			matches_json, err := os.ReadFile("site/data/matches.json")
+			if err != nil {
+				log.Printf("Error reading matches.json: %v\n", err)
+				return
+			}
+
+			var matches_data map[string]interface{}
+
+			err = json.Unmarshal(matches_json, &matches_data)
+			if err != nil {
+				log.Printf("Error unmarshalling matches.json: %v\n", err)
+				return
+			}
+
+			//Read metadata.json
+			metadata_json, err := os.ReadFile("site/data/metadata.json")
+			if err != nil {
+				log.Printf("Error reading metadata.json: %v\n", err)
+				return
+			}
+
+			var metadata map[string]interface{}
+
+			err = json.Unmarshal(metadata_json, &metadata)
+			if err != nil {
+				log.Printf("Error unmarshalling metadata.json: %v\n", err)
+				return
+			}
+
+			//Get season number & make prefix
+			current_season := int(metadata["current_season"].(map[string]interface{})["season"].(float64))
+			season_prefix := fmt.Sprintf("S%02d", current_season)
+
+			//Read current season matches & metadata
+			current_season_matches := matches_data["current_season"].(map[string]interface{})["matches"].(map[string]interface{})
+
+			current_season_metadata := matches_data["current_season"].(map[string]interface{})["metadata"].(map[string]interface{})
+
+			//construct the next match id of form S06-001
+			next_match_id := int(current_season_metadata["next_match_id"].(float64))
+			new_match_id := fmt.Sprintf("%s-%03d",
+				season_prefix,
+				next_match_id)
+
+			//add the new match result to the json data
+			current_season_matches[new_match_id] = map[string]interface{}{
+				"winner": matchResultReport.Winner,
+				"loser":  matchResultReport.Loser,
+				"result": matchResultReport.Result,
+				"bounty": matchResultReport.Bounty,
+			}
+
+			//increment next_match_id
+			current_season_metadata["next_match_id"] = next_match_id + 1
+
+			//Update the last update time
+			matches_data["metadata"].(map[string]interface{})["last_updated"] =
+				time.Now().UTC().Format(time.RFC3339)
+
+			//Write back to the JSON data
+			updated_matches_json, err := json.MarshalIndent(
+				matches_data,
+				"",
+				"    ",
+			)
+			if err != nil {
+				log.Printf("Error Marshalling Updated Matches Data: %v\n", err)
+				return
+			}
+
+			err = os.WriteFile(
+				"site/data/matches.json",
+				updated_matches_json,
+				0644,
+			)
+
+			//construct the embedded message from the match result.
+			embed := &discordgo.MessageEmbed{
+				Title: "Match Result Recorded",
+				Fields: []*discordgo.MessageEmbedField{
+					{
+						Name:   matchResultReport.Result,
+						Value:  fmt.Sprintf("<@%v> WON vs <@%v>", matchResultReport.Winner, matchResultReport.Loser),
+						Inline: true,
+					},
+				},
+				Footer: &discordgo.MessageEmbedFooter{
+					Text: fmt.Sprintf("Bounty: %v | MatchID: %v", matchResultReport.Bounty, new_match_id),
+				},
+				Color: 0xD80621, // Canadian Flag Red 🍁
+			}
+
+			s.InteractionRespond(
+				i.Interaction,
+				&discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "Match Recorded Successfully",
+						Embeds: []*discordgo.MessageEmbed{
+							embed,
+						},
+					},
+				},
+			)
+
 		}
 	})
 
@@ -326,29 +521,29 @@ func main() {
 			}
 
 			//Construct the match_result struct.
-			match_result := Match_Result{
-				winner: "",
-				loser:  "",
-				result: "",
-				bounty: false,
+			match_result := MatchResult{
+				Winner: "",
+				Loser:  "",
+				Result: "",
+				Bounty: false,
 			}
 
 			//Logic to parse the winner and loser based on the game results of the match.
 			result_split := strings.Split(msg_args[2], "-")
 			if result_split[0] > result_split[1] {
 				//Using regex to extract only the numbers from the userID tags. Typical format is <@12345>, so this removes the <@> for better storage.
-				match_result.winner = userIDRegex.ReplaceAllString(msg_args[1], "")
-				match_result.loser = userIDRegex.ReplaceAllString(msg_args[3], "")
-				match_result.result = fmt.Sprintf("%v-%v", result_split[0], result_split[1])
+				match_result.Winner = userIDRegex.ReplaceAllString(msg_args[1], "")
+				match_result.Loser = userIDRegex.ReplaceAllString(msg_args[3], "")
+				match_result.Result = fmt.Sprintf("%v-%v", result_split[0], result_split[1])
 			} else {
-				match_result.winner = userIDRegex.ReplaceAllString(msg_args[3], "")
-				match_result.loser = userIDRegex.ReplaceAllString(msg_args[1], "")
-				match_result.result = fmt.Sprintf("%v-%v", result_split[1], result_split[0])
+				match_result.Winner = userIDRegex.ReplaceAllString(msg_args[3], "")
+				match_result.Loser = userIDRegex.ReplaceAllString(msg_args[1], "")
+				match_result.Result = fmt.Sprintf("%v-%v", result_split[1], result_split[0])
 			}
 
 			//Logic to determine if the match was bounty. Default is false.
 			if msg_args[4] == "Bounty" {
-				match_result.bounty = true
+				match_result.Bounty = true
 			}
 
 			//Read matches.json
@@ -398,10 +593,10 @@ func main() {
 
 			//add the new match result to the json data
 			current_season_matches[new_match_id] = map[string]interface{}{
-				"winner": match_result.winner,
-				"loser":  match_result.loser,
-				"result": match_result.result,
-				"bounty": match_result.bounty,
+				"winner": match_result.Winner,
+				"loser":  match_result.Loser,
+				"result": match_result.Result,
+				"bounty": match_result.Bounty,
 			}
 
 			//increment next_match_id
@@ -438,13 +633,13 @@ func main() {
 				Title: "Match Result Recorded",
 				Fields: []*discordgo.MessageEmbedField{
 					{
-						Name:   match_result.result,
-						Value:  fmt.Sprintf("<@%v> WON vs <@%v>", match_result.winner, match_result.loser),
+						Name:   match_result.Result,
+						Value:  fmt.Sprintf("<@%v> WON vs <@%v>", match_result.Winner, match_result.Loser),
 						Inline: true,
 					},
 				},
 				Footer: &discordgo.MessageEmbedFooter{
-					Text: fmt.Sprintf("Bounty: %v", match_result.bounty),
+					Text: fmt.Sprintf("Bounty: %v", match_result.Bounty),
 				},
 				Color: 0xD80621, // Canadian Flag Red 🍁
 			}
