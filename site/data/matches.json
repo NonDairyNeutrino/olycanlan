@@ -33,15 +33,21 @@
                 "loser": "162114243557195776",
                 "result": "0-0",
                 "winner": "1504687575229665401"
+            },
+            "S06-006": {
+                "bounty": true,
+                "loser": "222215591765868544",
+                "result": "3-0",
+                "winner": "162114243557195776"
             }
         },
         "metadata": {
-            "next_match_id": 6,
+            "next_match_id": 7,
             "season_end": "",
             "season_start": ""
         }
     },
     "metadata": {
-        "last_updated": "2026-05-21T06:53:48Z"
+        "last_updated": "2026-05-22T01:06:50Z"
     }
 }

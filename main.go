@@ -332,15 +332,32 @@ func main() {
 				Color: 0xD80621, // Canadian Flag Red 🍁
 			}
 
+			//Send message in Bounty Board channel
+			msg, err_announce := s.ChannelMessageSendEmbed(
+				os.Getenv("BOUNTY_CHNL_ID"),
+				embed,
+			)
+
+			//Construct link to message for reply
+			msgURL := fmt.Sprintf(
+				"https://discord.com/channels/%s/%s/%s",
+				i.GuildID,
+				msg.ChannelID,
+				msg.ID,
+			)
+
+			if err_announce != nil {
+				log.Printf("Error making League Opening Announcement: %v\n", err_announce)
+				return
+			}
+
 			s.InteractionRespond(
 				i.Interaction,
 				&discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
-						Content: "Match Recorded Successfully",
-						Embeds: []*discordgo.MessageEmbed{
-							embed,
-						},
+						Content: fmt.Sprintf("Match Recorded Successfully.\n%s", msgURL),
+						Flags:   discordgo.MessageFlagsEphemeral,
 					},
 				},
 			)
