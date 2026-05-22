@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"regexp"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -31,7 +32,180 @@ import (
 // 4. Update Discord scoreboard post with new and total points
 // 5. Update website scoreboard with new and total points
 
-const prefix string = "!skbot"
+// Bot Data Structures & Functions. To store in memory rather than read/write json continually.
+type BotData struct {
+	Metadata map[string]interface{}
+	Players  map[string]interface{}
+	Matches  map[string]interface{}
+	Season   map[string]interface{}
+
+	Mutex sync.RWMutex
+}
+
+var botData BotData
+
+// functions for loading .json data at bot startup
+func loadMetadata() error {
+	data, err := os.ReadFile("site/data/metadata.json")
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(data, &botData.Metadata)
+	if err != nil {
+		return err
+	}
+	log.Println("metadata.json loaded")
+	return nil
+}
+func loadPlayers() error {
+	data, err := os.ReadFile("site/data/players.json")
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(data, &botData.Players)
+	if err != nil {
+		return err
+	}
+	log.Println("players.json loaded")
+	return nil
+}
+func loadMatches() error {
+	data, err := os.ReadFile("site/data/matches.json")
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(data, &botData.Matches)
+	if err != nil {
+		return err
+	}
+	log.Println("matches.json loaded")
+	return nil
+}
+func loadSeason() error {
+	data, err := os.ReadFile("site/data/season.json")
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(data, &botData.Season)
+	if err != nil {
+		return err
+	}
+	log.Println("season.json loaded")
+	return nil
+}
+
+// functions for saving/writing json data back
+func saveMetadata() error {
+	data, err := json.MarshalIndent(
+		botData.Metadata,
+		"",
+		"    ",
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(
+		"site/data/metadata.json",
+		data,
+		0644,
+	)
+}
+
+func savePlayers() error {
+	data, err := json.MarshalIndent(
+		botData.Players,
+		"",
+		"    ",
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(
+		"site/data/players.json",
+		data,
+		0644,
+	)
+}
+
+func saveMatches() error {
+	data, err := json.MarshalIndent(
+		botData.Matches,
+		"",
+		"    ",
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(
+		"site/data/matches.json",
+		data,
+		0644,
+	)
+}
+
+func saveSeason() error {
+	data, err := json.MarshalIndent(
+		botData.Season,
+		"",
+		"    ",
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(
+		"site/data/season.json",
+		data,
+		0644,
+	)
+}
+
+// functionsto load & save all data at once
+func loadAllData() error {
+	if err := loadMetadata(); err != nil {
+		return err
+	}
+	if err := loadPlayers(); err != nil {
+		return err
+	}
+	if err := loadMatches(); err != nil {
+		return err
+	}
+	if err := loadSeason(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func saveAllData() error {
+	if err := saveMetadata(); err != nil {
+		return err
+	}
+	if err := savePlayers(); err != nil {
+		return err
+	}
+	if err := saveMatches(); err != nil {
+		return err
+	}
+	if err := saveSeason(); err != nil {
+		return err
+	}
+	log.Println("All data saved to .json")
+	return nil
+}
+
+//-------------------------------------------------------------------
 
 type MatchResult struct { // this structure with capital letters apparently helps JSON parse. IDK...
 	Winner string `json:"winner"`
@@ -46,6 +220,8 @@ type League_Player struct {
 	player_type    string
 	decklist       string
 }
+
+const prefix string = "!skbot"
 
 // slash command global variable
 var commands = []*discordgo.ApplicationCommand{
@@ -185,6 +361,13 @@ func main() {
 		log.Println("Discord sucessfully connected.")
 	}
 
+	err = loadAllData()
+	if err != nil {
+		log.Fatalln("Error loading bot data:", err)
+	} else {
+		log.Println("Bot data loaded")
+	}
+
 	//regex to parse only the numbers from a string (for userIDs)
 	userIDRegex := regexp.MustCompile(`[^0-9]+`)
 
@@ -246,53 +429,25 @@ func main() {
 				Bounty: bounty,
 			}
 
-			//Read matches.json
-			matches_json, err := os.ReadFile("site/data/matches.json")
-			if err != nil {
-				log.Printf("Error reading matches.json: %v\n", err)
-				return
-			}
-
-			var matches_data map[string]interface{}
-
-			err = json.Unmarshal(matches_json, &matches_data)
-			if err != nil {
-				log.Printf("Error unmarshalling matches.json: %v\n", err)
-				return
-			}
-
-			//Read metadata.json
-			metadata_json, err := os.ReadFile("site/data/metadata.json")
-			if err != nil {
-				log.Printf("Error reading metadata.json: %v\n", err)
-				return
-			}
-
-			var metadata map[string]interface{}
-
-			err = json.Unmarshal(metadata_json, &metadata)
-			if err != nil {
-				log.Printf("Error unmarshalling metadata.json: %v\n", err)
-				return
-			}
+			//Mutex lock the botData to protect from multiple commands mess
+			botData.Mutex.Lock()
 
 			//Get season number & make prefix
-			current_season := int(metadata["current_season"].(map[string]interface{})["season"].(float64))
-			season_prefix := fmt.Sprintf("S%02d", current_season)
+			currentSeason := int(botData.Metadata["current_season"].(map[string]interface{})["season"].(float64))
+			seasonPrefix := fmt.Sprintf("S%02d", currentSeason)
 
 			//Read current season matches & metadata
-			current_season_matches := matches_data["current_season"].(map[string]interface{})["matches"].(map[string]interface{})
-
-			current_season_metadata := matches_data["current_season"].(map[string]interface{})["metadata"].(map[string]interface{})
+			currentSeasonMatches := botData.Matches["current_season"].(map[string]interface{})["matches"].(map[string]interface{})
+			currentSeasonMetadata := botData.Matches["current_season"].(map[string]interface{})["metadata"].(map[string]interface{})
 
 			//construct the next match id of form S06-001
-			next_match_id := int(current_season_metadata["next_match_id"].(float64))
-			new_match_id := fmt.Sprintf("%s-%03d",
-				season_prefix,
-				next_match_id)
+			nextMatchId := int(currentSeasonMetadata["next_match_id"].(float64))
+			newMatchId := fmt.Sprintf("%s-%03d",
+				seasonPrefix,
+				nextMatchId)
 
 			//add the new match result to the json data
-			current_season_matches[new_match_id] = map[string]interface{}{
+			currentSeasonMatches[newMatchId] = map[string]interface{}{
 				"winner": matchResultReport.Winner,
 				"loser":  matchResultReport.Loser,
 				"result": matchResultReport.Result,
@@ -300,28 +455,35 @@ func main() {
 			}
 
 			//increment next_match_id
-			current_season_metadata["next_match_id"] = next_match_id + 1
+			currentSeasonMetadata["next_match_id"] = nextMatchId + 1
 
 			//Update the last update time
-			matches_data["metadata"].(map[string]interface{})["last_updated"] =
+			botData.Matches["metadata"].(map[string]interface{})["last_updated"] =
 				time.Now().UTC().Format(time.RFC3339)
 
-			//Write back to the JSON data
-			updated_matches_json, err := json.MarshalIndent(
-				matches_data,
-				"",
-				"    ",
-			)
+			//Save matches.json
+			err := saveMatches()
 			if err != nil {
-				log.Printf("Error Marshalling Updated Matches Data: %v\n", err)
+				//Unlocks before kicking out due to error
+				botData.Mutex.Unlock()
+				log.Printf("Error saving matches.json: %v", err)
+
+				//ephemeral reply stating there was an error
+				s.InteractionRespond(
+					i.Interaction,
+					&discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: "Failed to record match result.",
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					},
+				)
 				return
 			}
 
-			err = os.WriteFile(
-				"site/data/matches.json",
-				updated_matches_json,
-				0644,
-			)
+			//Unlock the botData
+			botData.Mutex.Unlock()
 
 			//construct the embedded message from the match result.
 			embed := &discordgo.MessageEmbed{
@@ -334,16 +496,30 @@ func main() {
 					},
 				},
 				Footer: &discordgo.MessageEmbedFooter{
-					Text: fmt.Sprintf("Bounty: %v | MatchID: %v", matchResultReport.Bounty, new_match_id),
+					Text: fmt.Sprintf("Bounty: %v | MatchID: %v", matchResultReport.Bounty, newMatchId),
 				},
 				Color: 0xD80621, // Canadian Flag Red 🍁
 			}
 
 			//Send message in Bounty Board channel
-			msg, err_announce := s.ChannelMessageSendEmbed(
+			msg, errAnnounce := s.ChannelMessageSendEmbed(
 				os.Getenv("BOUNTY_CHNL_ID"),
 				embed,
 			)
+			if errAnnounce != nil {
+				log.Printf("Error making match announcement: %v\n", errAnnounce)
+				s.InteractionRespond(
+					i.Interaction,
+					&discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: "Match recorded successfully, but announcement failed.",
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					},
+				)
+				return
+			}
 
 			//Construct link to message for reply
 			msgURL := fmt.Sprintf(
@@ -352,11 +528,6 @@ func main() {
 				msg.ChannelID,
 				msg.ID,
 			)
-
-			if err_announce != nil {
-				log.Printf("Error making League Opening Announcement: %v\n", err_announce)
-				return
-			}
 
 			s.InteractionRespond(
 				i.Interaction,
@@ -1054,7 +1225,6 @@ func main() {
 	// Not 100% confident what this is needed for
 	discord.Identify.Intents = discordgo.IntentsAllWithoutPrivileged
 
-	//Below is copied from video. I think this essentially establishes when the session is opened or closed.
 	err = discord.Open()
 	if err != nil {
 		log.Fatalln(err)
@@ -1070,5 +1240,13 @@ func main() {
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
-	fmt.Println("Bot is shutting down")
+	fmt.Println("Bot is shutting down...")
+
+	//Save all data at shutdown
+	err = saveAllData()
+	if err != nil {
+		log.Println("Error saving bot data:", err)
+	}
+
+	log.Println("Bot data saved.")
 }
