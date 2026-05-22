@@ -1,14 +1,14 @@
 {
     "current_season": {
-        "season": 6,
-        "start_date": "2024-01-01",
-        "signups": true,
         "active_players": 20,
-        "total_rounds": 4,
-        "current_round": 1
+        "current_round": 1,
+        "season": 6,
+        "signups": true,
+        "start_date": "2024-01-01",
+        "total_rounds": 4
     },
     "league": {
-        "name": "Olympia Canadian Highlander League",
-        "format": "Canadian Highlander"
+        "format": "Canadian Highlander",
+        "name": "Olympia Canadian Highlander League"
     }
 }
