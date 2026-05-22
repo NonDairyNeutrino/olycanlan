@@ -118,11 +118,6 @@ var commands = []*discordgo.ApplicationCommand{
 			},
 			{
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
-				Name:        "drop",
-				Description: "Drop from the current league season",
-			},
-			{
-				Type:        discordgo.ApplicationCommandOptionSubCommand,
 				Name:        "open",
 				Description: "Open the current season for signups",
 			},
@@ -130,6 +125,20 @@ var commands = []*discordgo.ApplicationCommand{
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 				Name:        "close",
 				Description: "Closes the current season for signups",
+			},
+		},
+	},
+
+	//Season commands (drop, new, rules)
+	{
+		Name:        "season",
+		Description: "Season commands",
+
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Name:        "drop",
+				Description: "Drop from the current league season",
 			},
 			{
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
@@ -457,26 +466,6 @@ func main() {
 						Flags:   discordgo.MessageFlagsEphemeral,
 					},
 				})
-			//signup drop
-			case "drop":
-
-				guildMember, _ := s.GuildMember(i.GuildID, i.Member.User.ID)
-
-				//check current roles. If not already a jammer or battler do nothing.
-				for _, r := range guildMember.Roles {
-					if r == os.Getenv("JAMMER_ID") || r == os.Getenv("BATTLER_ID") {
-						//Currently signed up
-						//Remove role
-						s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, r)
-						s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseChannelMessageWithSource,
-							Data: &discordgo.InteractionResponseData{
-								Content: "You have been dropped from the current league season. Hope you can join us in the future!",
-								Flags:   discordgo.MessageFlagsEphemeral,
-							},
-						})
-					}
-				}
 			case "open":
 
 				//Read metadata for if league signups are open
@@ -604,6 +593,31 @@ func main() {
 						},
 					})
 				}
+			}
+		case "season":
+			sub := i.ApplicationCommandData().Options[0].Name
+			switch sub {
+			//season drop
+			case "drop":
+
+				guildMember, _ := s.GuildMember(i.GuildID, i.Member.User.ID)
+
+				//check current roles. If not already a jammer or battler do nothing.
+				for _, r := range guildMember.Roles {
+					if r == os.Getenv("JAMMER_ID") || r == os.Getenv("BATTLER_ID") {
+						//Currently signed up
+						//Remove role
+						s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, r)
+						s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Content: "You have been dropped from the current league season. Hope you can join us in the future!",
+								Flags:   discordgo.MessageFlagsEphemeral,
+							},
+						})
+					}
+				}
+			//season new
 			case "new":
 
 				//Read metadata for if league signups are open
@@ -707,6 +721,7 @@ func main() {
 						},
 					})
 				}
+
 			}
 		}
 	})
