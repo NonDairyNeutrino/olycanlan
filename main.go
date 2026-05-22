@@ -101,8 +101,7 @@ var commands = []*discordgo.ApplicationCommand{
 	},
 
 	//Signup (battler, jammer, open, close)
-	{
-		Name:        "signup",
+	{Name: "signup",
 		Description: "League signup commands",
 
 		Options: []*discordgo.ApplicationCommandOption{
@@ -130,8 +129,7 @@ var commands = []*discordgo.ApplicationCommand{
 	},
 
 	//Season commands (drop, new, rules)
-	{
-		Name:        "season",
+	{Name: "season",
 		Description: "Season commands",
 
 		Options: []*discordgo.ApplicationCommandOption{
@@ -721,7 +719,6 @@ func main() {
 						},
 					})
 				}
-
 			}
 		}
 	})

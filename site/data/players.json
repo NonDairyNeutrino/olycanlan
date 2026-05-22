@@ -1,53 +1,36 @@
 {
-    "current_season": {
-        "battlers": {
-            "162114243557195776": {
-                "discord_nickname": "Curie(ous)",
-                "decklist": {
-                    "url": "https://moxfield.com/decks/fa-TvMUddkq1xihS_nUViA",
-                    "approved": false
-                },
-                "league_record": "5-2",
-                "league_game_record": "",
-                "points": 10,
-                "historical_record": "0-0"
-            },
-             "222215591765868544": {
-                "discord_nickname": "NonDairyNeutrino",
-                "decklist": {
-                    "url": "",
-                    "approved": false
-                },
-                "league_record": "0-0",
-                "league_game_record": "",
-                "points": 0,
-                "historical_record": "0-0"
-            }
-        },
-        "jammers": {
-            "222215591765868544": {
-                "discord_nickname": "NonDairyNeutrino",
-                "decklist": {
-                    "url": "",
-                    "approved": false
-                },
-                "league_record": "",
-                "league_game_record": "",
-                "points": 0,
-                "historical_record": "0-0"
-            }
-        }
+    "metadata": {
+        "last_updated": ""
     },
-    "inactive": {
+
+    "players": {
         "162114243557195776": {
             "discord_nickname": "Curie(ous)",
-            "last_decklist": "",
-            "historical_record": "0-0"
-        },
+            "seasons_played": [5,6,7],
+            "historical_record": {
+                "wins": 20,
+                "losses": 5,
+                "game_wins": 55,
+                "game_losses": 8
+                },
+            "last_decklist": {
+                "url": "https://moxfield.com/decks/fa-TvMUddkq1xihS_nUViA",
+                "name": "Discard Moon"
+                }
+         },
         "222215591765868544": {
             "discord_nickname": "NonDairyNeutrino",
-            "last_decklist": "",
-            "historical_record": "0-0"
+            "seasons_played": [2,3,5,6,7],
+            "historical_record": {
+                "wins": 35,
+                "losses": 12,
+                "game_wins": 55,
+                "game_losses": 8
+                },
+            "last_decklist": {
+                "url": "https://moxfield.com/decks/fa-TvMUddkq1xihS_nUViA",
+                "name": "Nat's Discard Moon"
+                }
         }
     }
 }

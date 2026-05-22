@@ -1,0 +1,53 @@
+{
+    "current_season": {
+        "battlers": {
+            "162114243557195776": {
+                "discord_nickname": "Curie(ous)",
+                "decklist": {
+                    "url": "https://moxfield.com/decks/fa-TvMUddkq1xihS_nUViA",
+                    "approved": false
+                },
+                "league_record": "5-2",
+                "league_game_record": "",
+                "points": 10,
+                "historical_record": "0-0"
+            },
+             "222215591765868544": {
+                "discord_nickname": "NonDairyNeutrino",
+                "decklist": {
+                    "url": "",
+                    "approved": false
+                },
+                "league_record": "0-0",
+                "league_game_record": "",
+                "points": 0,
+                "historical_record": "0-0"
+            }
+        },
+        "jammers": {
+            "222215591765868544": {
+                "discord_nickname": "NonDairyNeutrino",
+                "decklist": {
+                    "url": "",
+                    "approved": false
+                },
+                "league_record": "",
+                "league_game_record": "",
+                "points": 0,
+                "historical_record": "0-0"
+            }
+        }
+    },
+    "inactive": {
+        "162114243557195776": {
+            "discord_nickname": "Curie(ous)",
+            "last_decklist": "",
+            "historical_record": "0-0"
+        },
+        "222215591765868544": {
+            "discord_nickname": "NonDairyNeutrino",
+            "last_decklist": "",
+            "historical_record": "0-0"
+        }
+    }
+}
