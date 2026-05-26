@@ -1,65 +1,63 @@
 {
-    "season_players": {
-        "162114243557195776": {
-            "role": "battler",
-
-            "active": true,
-            "dropped": false,
-
-            "decklist": {
-                "url": "https://moxfield.com/decks/fa-TvMUddkq1xihS_nUViA",
-                "name": "Discard Moon"
-            },
-
-            "standings": {
-                "points": 15,
-                "wins": 5,
-                "losses": 2,
-                "game_wins": 11,
-                "game_losses": 6
-            },
-
-            "received_bye": false,
-
-            "opponents": ["222215591765868544","333333333333333333","444444444444444444"]
-        }
-    },
-
     "rounds": {
         "1": {
-            "status": "completed",
             "pairings": [
                 {
+                    "bye": false,
+                    "match_id": "S06-001",
+                    "player1": "222215591765868544",
+                    "player2": "162114243557195776",
+                    "reported": true,
+                    "result": "2-1",
                     "table": 1,
-                    "player1": "222215591765868544",
-                    "player2": "162114243557195776",
-                    "bye": false,
-                    "reported": true,
-                    "winner": "162114243557195776",
-                    "result": "2-1",
-                    "match_id": "S06-001"
+                    "winner": "162114243557195776"
                 },
                 {
+                    "bye": false,
+                    "match_id": "S06-002",
+                    "player1": "222215591765868544",
+                    "player2": "162114243557195776",
+                    "reported": true,
+                    "result": "2-1",
                     "table": 2,
-                    "player1": "222215591765868544",
-                    "player2": "162114243557195776",
-                    "bye": false,
-                    "reported": true,
-                    "winner": "162114243557195776",
-                    "result": "2-1",
-                    "match_id": "S06-002"
+                    "winner": "162114243557195776"
                 },
                 {
-                    "table": 3,
+                    "bye": true,
+                    "match_id": "",
                     "player1": "222215591765868544",
                     "player2": "",
-                    "bye": true,
                     "reported": true,
-                    "winner": "222215591765868544",
                     "result": "BYE",
-                    "match_id": ""
+                    "table": 3,
+                    "winner": "222215591765868544"
                 }
-            ]
+            ],
+            "status": "completed"
+        }
+    },
+    "season_players": {
+        "162114243557195776": {
+            "active": true,
+            "decklist": {
+                "name": "Discard Moon",
+                "url": "https://moxfield.com/decks/fa-TvMUddkq1xihS_nUViA"
+            },
+            "dropped": false,
+            "opponents": [
+                "222215591765868544",
+                "333333333333333333",
+                "444444444444444444"
+            ],
+            "received_bye": false,
+            "role": "battler",
+            "standings": {
+                "game_losses": 6,
+                "game_wins": 11,
+                "losses": 2,
+                "points": 15,
+                "wins": 5
+            }
         }
     }
 }
