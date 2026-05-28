@@ -9,19 +9,7 @@ Discord bot to help manage the Olympia Canadian Highlander League
 - **General League Announcements.** Including semi-regular point announcement, and standings at the end. Winner(s) announcement. Share decklists once league is finished.
 
 ## Slash Commands Heirarchy
-Finished commands have 🟩
-
-Developed commands have 🟨
-
-Nonstarted commands have 🟥
-
-
-#### `/command-name` 🟩🟨🟥
-**Required Roles:** (if applicable)  
-**Description:**  
-Short description of what the command does.
-
----
+Finished 🟩 | Developed 🟨 | Nonstarted 🟥
 
 ### **PLAYER COMMANDS**
 
