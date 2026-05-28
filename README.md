@@ -47,7 +47,7 @@ Short description of what the command does.
 
 #### `/signup decklist` 🟨
 
-**Required Roles:** Battler
+**Required Roles:** Battler  
 **Description:**  Stores or updates the Battler's submitted decklist for the season. Pings organizer to review for point spread.
 
 ---
