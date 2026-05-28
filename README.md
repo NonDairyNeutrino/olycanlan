@@ -61,27 +61,80 @@ Short description of what the command does.
 
 ### **ADMIN COMMANDS**
 
-- /league
-  - open-signups 🟨
-  - close-signups 🟨
-  - new-season 🟥
-  - drop-player 🟥
+#### `/leauge open-signups` 🟨
+**Description:**  Opens league registration, enabling player signups and updating system state to allow role assignment and enrollment actions.
 
-- /round
-  - new 🟥
-  - post 🟥
-  - close 🟥
-  - reminder 🟥
+---
 
-- /match
-  - edit 🟥
-  - delete 🟥
+#### `/leauge close-signups` 🟨
+**Description:**  Closes league registration, disabling player signups and updating system state to allow role assignment and enrollment actions.
 
-- /player
-  - signup
-  - role
-  - drop
-  - decklist-review
-  - points-add
-  - points-set
-  - info
+---
+
+#### `/leauge new-season` 🟥
+**Description:**  Initializes a new season. Clears current season match history, resets player roles, makes new season announcement.
+
+---
+
+#### `/round new` 🟥
+**Description:**  Generates pairings for the next round using current standings, assigns matchups and byes, and writes round structure to season data. 
+
+---
+
+#### `/round post` 🟥
+**Description:**  Publishes round and matches info in matchups channel. Separated from `/round new` to allow for QA.
+
+---
+
+#### `/round close` 🟥
+**Description:**  Closes the currently active round. How does it handle un-reported matches?
+
+---
+
+#### `/round reminder` 🟥
+**Description:**  Publishes a reminder for all unreported/incomplete matches in the active round
+
+---
+
+#### `/match edit` 🟥
+**Description:**  Allows revision of a match's data using its matchID.
+
+---
+
+#### `/match delete` 🟥
+**Description:**  Removes a match from the matches data using its matchID.
+
+---
+
+#### `/player signup` 🟥
+**Description:**  Admin verion of the signup command. Allows selection of battler/jammer
+
+---
+
+#### `/player role` 🟥
+**Description:**  Changes a players role within the current season, battler/jammer
+
+---
+
+#### `/player drop` 🟥
+**Description:**  Drops a player from the current league season
+
+---
+
+#### `/player decklist-review` 🟥
+**Description:**  Allows an organizer to review a submitted decklist. 
+
+---
+
+#### `/player points-add` 🟥
+**Description:**  Manually adds league points to a player
+
+---
+
+#### `/player points-set` 🟥
+**Description:**  Manually sets the league points of a player
+
+---
+
+#### `/player info` 🟥
+**Description:**  Replies with a players role, current record, decklist, match history?
