@@ -37,7 +37,7 @@
         }
     },
     "season_players": {
-        "162114243557195776": {
+        "162114243557195775": {
             "active": true,
             "decklist": {
                 "name": "Discard Moon",
@@ -57,6 +57,24 @@
                 "losses": 2,
                 "points": 15,
                 "wins": 5
+            }
+        },
+        "162114243557195776": {
+            "active": true,
+            "decklist": {
+                "name": "",
+                "url": ""
+            },
+            "dropped": false,
+            "opponents": [],
+            "received_bye": false,
+            "role": "battler",
+            "standings": {
+                "game_losses": 0,
+                "game_wins": 0,
+                "losses": 0,
+                "points": 0,
+                "wins": 0
             }
         }
     }

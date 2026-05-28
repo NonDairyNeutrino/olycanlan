@@ -33,26 +33,26 @@ Short description of what the command does.
 
 ---
 
-#### `/signup battler` 🟨
+#### `/signup battler` 🟩
 
 **Description:**  Registers the command giver as a Battler for the current season and assigns the correct role. Usable only while signups are OPEN.
 
 ---
 
-#### `/signup jammer` 🟨
+#### `/signup jammer` 🟩
 
-**Description:**  Registers the command giver as a Jammer for the current season and assigns the correct role. Usable only while signups are OPEN.
+**Description:**  Registers the command giver as a Jammer for the current season and assigns the correct role.
 
 ---
 
-#### `/signup decklist` 🟨
+#### `/signup decklist` 🟥
 
 **Required Roles:** Battler  
 **Description:**  Stores or updates the Battler's submitted decklist for the season. Pings organizer to review for point spread.
 
 ---
 
-#### `/drop` 🟥
+#### `/drop` 🟩
 
 **Required Roles:** Battler & Jammer
 **Description:**  Removes a player from the current season. Indicates in their player data that they are inactive for future rounds.
