@@ -861,6 +861,7 @@ func main() {
 					playerData["role"] = "battler"
 					playerData["active"] = true
 					playerData["dropped"] = false
+					playerData["decklist"].(map[string]interface{})["url"] = "Not Submitted"
 
 				} else {
 
@@ -868,8 +869,9 @@ func main() {
 					seasonPlayers[i.Member.User.ID] = map[string]interface{}{
 						"active": true,
 						"decklist": map[string]interface{}{
-							"url":  "",
-							"name": "",
+							"url":      "Not Submitted",
+							"name":     "",
+							"reviewed": false,
 						},
 						"dropped":      false,
 						"opponents":    []interface{}{},
@@ -996,8 +998,9 @@ func main() {
 					seasonPlayers[i.Member.User.ID] = map[string]interface{}{
 						"active": true,
 						"decklist": map[string]interface{}{
-							"url":  "",
-							"name": "",
+							"url":      "Not Submitted",
+							"name":     "",
+							"reviewed": false,
 						},
 						"dropped":      false,
 						"opponents":    []interface{}{},
@@ -1077,6 +1080,140 @@ func main() {
 						Flags:   discordgo.MessageFlagsEphemeral,
 					},
 				})
+			// /signup decklist
+			case "decklist":
+				//Update season.json -> "season_players" -> userID -> "decklist" -> "name" and "url"
+
+				//check if user is allowed to complete command
+				allowedRoles := []string{
+					os.Getenv("BATTLER_ID"),
+				}
+
+				if !memberHasRole(i.Member, allowedRoles) {
+					s.InteractionRespond(
+						i.Interaction,
+						&discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Content: "Only Battlers ⚔️ need to submit a decklist. Please contact a league organizer if you are missing the correct role.",
+								Flags:   discordgo.MessageFlagsEphemeral,
+							},
+						},
+					)
+					return
+				}
+
+				//Logic check if player already in season data
+				existingSeasonPlayer, exists := botData.Season["season_players"].(map[string]interface{})[i.Member.User.ID]
+
+				//If exists = false, then there is something here. They dont have player data in season.json but are holding the battler role.
+				if !exists {
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: fmt.Sprintf("No seasonal player data found for <@%v>. An organizer will correct the issue shortly", i.Member.User.ID),
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+
+					//Make error announcement in organizer channel
+					s.ChannelMessageSend(
+						os.Getenv("ADMIN_CHNL_ID"),
+						fmt.Sprintf("<@%v> - Bot failed to retrieve <@%v>'s player data for decklist submission.\nThey either incorrectly have the Battler ⚔️ role, or their data has been corrupted.", os.Getenv("ORGANIZER_ID"), i.Member.User.ID),
+					)
+					return
+				}
+
+				//Get player decklist data
+				playerDecklistData := existingSeasonPlayer.(map[string]interface{})["decklist"]
+				currentDecklist := playerDecklistData.(map[string]interface{})["url"]
+
+				//Read metadata for if league signups are open
+				signupStatus := botData.Metadata["current_season"].(map[string]interface{})["signups"].(bool)
+
+				//if signupStatus is false and their currentDecklist was not submitted, let the user know.
+				if !signupStatus && currentDecklist == "Not Submitted" {
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: "Signups are currently closed for this season. It appears you do not have a submitted decklist. Please contact an organizer.",
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				//if signupStatus is false, let the user know and return including their submitted decklist.
+				if !signupStatus {
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: fmt.Sprintf("Signups are currently closed for this season. Please use the original decklist submitted:\n%v", currentDecklist),
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+
+				//gathers the options
+				options := i.ApplicationCommandData().Options
+
+				//establish the variables from the command
+				var url string
+				var name string
+
+				//Goes one layer deeper here because this is a subcommand
+				for _, opt := range options {
+					if opt.Name == "decklist" {
+						for _, subOpt := range opt.Options {
+							switch subOpt.Name {
+							case "url":
+								url = string(subOpt.StringValue())
+							case "name":
+								name = string(subOpt.StringValue())
+							}
+						}
+					}
+
+				}
+
+				//Mutex Lock the botData for writing
+				botData.Mutex.Lock()
+
+				//Assign the playerDecklistData
+				playerDecklistData.(map[string]interface{})["url"] = url
+				playerDecklistData.(map[string]interface{})["name"] = name
+
+				//Save season.json
+				err_season := saveSeason()
+				//Unlock botdata
+				botData.Mutex.Unlock()
+				//Print errors AFTER unlock
+				if err_season != nil {
+					return
+				}
+
+				//Reply with ephemeral reply confirming submission
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: fmt.Sprintf("Your decklist has been submitted.\n%v | %v", name, url),
+						Flags:   discordgo.MessageFlagsEphemeral,
+					},
+				})
+
+				//Send message that decklist is ready in admin channel
+				msg, err := s.ChannelMessageSend(
+					os.Getenv("ADMIN_CHNL_ID"),
+					fmt.Sprintf("<@&%v>\n<@%v> has submitted their decklist for review.\n%v | %v\n\nReact with a ✅ to approve or a ⛔ to deny", os.Getenv("ORGANIZER_ID"), i.Member.User.ID, name, url),
+				)
+				if err != nil {
+					log.Printf("Error sending message in admin channel: %v", err)
+					return
+				}
+				_ = s.MessageReactionAdd(os.Getenv("ADMIN_CHNL_ID"), msg.ID, "✅")
+				_ = s.MessageReactionAdd(os.Getenv("ADMIN_CHNL_ID"), msg.ID, "⛔")
+
+				return
 			}
 		case "drop":
 
@@ -1154,7 +1291,7 @@ func main() {
 				//Make drop announcement in organizer channel
 				s.ChannelMessageSend(
 					os.Getenv("ADMIN_CHNL_ID"),
-					fmt.Sprintf("<@%v> has self-dropped as a %v for the current season.\n**Reason:** *%v*", i.Member.User.ID, roleName, dropReason),
+					fmt.Sprintf("<@&%v>\n<@%v> has self-dropped as a %v for the current season.\n**Reason:** *%v*", os.Getenv("ORGANIZER_ID"), i.Member.User.ID, roleName, dropReason),
 				)
 
 				return
