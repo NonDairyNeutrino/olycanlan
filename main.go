@@ -116,7 +116,6 @@ func saveMetadata() error {
 		0644,
 	)
 }
-
 func savePlayers() error {
 	data, err := json.MarshalIndent(
 		botData.Players,
@@ -134,7 +133,6 @@ func savePlayers() error {
 		0644,
 	)
 }
-
 func saveMatches() error {
 	data, err := json.MarshalIndent(
 		botData.Matches,
@@ -152,7 +150,6 @@ func saveMatches() error {
 		0644,
 	)
 }
-
 func saveSeason() error {
 	data, err := json.MarshalIndent(
 		botData.Season,
@@ -187,7 +184,6 @@ func loadAllData() error {
 	}
 	return nil
 }
-
 func saveAllData() error {
 	if err := saveMetadata(); err != nil {
 		return err
@@ -225,10 +221,6 @@ const prefix string = "!skbot"
 
 // slash command global variable
 var commands = []*discordgo.ApplicationCommand{
-	//Tester little ping pong command
-	{Name: "ping",
-		Description: "Replies with Pong!",
-	},
 
 	//Result command for reporting matches
 	{Name: "result",
@@ -344,6 +336,24 @@ func registerCommands(s *discordgo.Session) {
 	}
 }
 
+// function for role check for slash commands.
+// returns true if role is met, false if not.
+func memberHasRole(
+	member *discordgo.Member,
+	allowedRoles []string,
+) bool {
+	for _, memberRole := range member.Roles {
+
+		for _, allowedRole := range allowedRoles {
+
+			if memberRole == allowedRole {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func main() {
 	// start by loading things like API tokens from the .env file
 	err := godotenv.Load()
@@ -383,22 +393,27 @@ func main() {
 		}
 
 		switch i.ApplicationCommandData().Name {
-		case "ping":
-
-			err := s.InteractionRespond(
-				i.Interaction,
-				&discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: "Pong!",
-					},
-				},
-			)
-
-			if err != nil {
-				log.Println(err)
-			}
 		case "result":
+
+			//check if user is allowed to complete command
+			allowedRoles := []string{
+				os.Getenv("BATTLER_ID"),
+				os.Getenv("JAMMER_ID"),
+			}
+
+			if !memberHasRole(i.Member, allowedRoles) {
+				s.InteractionRespond(
+					i.Interaction,
+					&discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: "Only active league members can execute this command. Please contact a league organizer if you are missing the correct role.",
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					},
+				)
+				return
+			}
 
 			//gathers the options
 			options := i.ApplicationCommandData().Options
@@ -441,10 +456,11 @@ func main() {
 			currentSeasonMetadata := botData.Matches["current_season"].(map[string]interface{})["metadata"].(map[string]interface{})
 
 			//construct the next match id of form S06-001
-			nextMatchId := int(currentSeasonMetadata["next_match_id"].(float64))
+			nextMatchId := currentSeasonMetadata["next_match_id"].(float64)
 			newMatchId := fmt.Sprintf("%s-%03d",
 				seasonPrefix,
-				nextMatchId)
+				int(nextMatchId),
+			)
 
 			//add the new match result to the json data
 			currentSeasonMatches[newMatchId] = map[string]interface{}{
