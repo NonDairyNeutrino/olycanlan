@@ -441,8 +441,8 @@ var commands = []*discordgo.ApplicationCommand{
 		},
 	},
 
-	//Admin Player Commands (signup, drop, decklist-review, points-add, points-set, info)
-	{Name: "player",
+	//Admin Player Commands (signup, drop, decklist-review, points-modify, info)
+	{Name: "admin-player",
 		Description: "Admin Player Commands",
 
 		Options: []*discordgo.ApplicationCommandOption{
@@ -505,7 +505,7 @@ var commands = []*discordgo.ApplicationCommand{
 			},
 			{
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
-				Name:        "points-change",
+				Name:        "points-modify",
 				Description: "Changes the league points of a specified player",
 				Options: []*discordgo.ApplicationCommandOption{
 					{
@@ -1143,6 +1143,277 @@ func main() {
 						},
 					})
 				}
+			}
+		case "drop":
+		case "league":
+			sub := i.ApplicationCommandData().Options[0].Name
+			switch sub {
+			case "open-signups":
+
+				//Read metadata for if league signups are open
+				metadataJson, err := os.ReadFile("site/data/metadata.json")
+				if err != nil {
+					log.Println(err)
+					return
+				}
+
+				var metadata map[string]interface{}
+
+				err = json.Unmarshal(metadataJson, &metadata)
+				if err != nil {
+					log.Println(err)
+					return
+				}
+
+				signupStatus := metadata["current_season"].(map[string]interface{})["signups"].(bool)
+
+				if !signupStatus {
+					//If false open them
+
+					//Update the signup status
+					metadata["current_season"].(map[string]interface{})["signups"] = true
+
+					//Write back to the JSON data
+					updated_metadata, err := json.MarshalIndent(
+						metadata,
+						"",
+						"    ",
+					)
+					if err != nil {
+						log.Printf("Error Marshalling Updated Metadata: %v\n", err)
+						return
+					}
+
+					err = os.WriteFile(
+						"site/data/metadata.json",
+						updated_metadata,
+						0644,
+					)
+
+					if err != nil {
+						log.Printf("Error writing metadata.json: %v\n", err)
+						return
+					}
+
+					//Reply with a hidden message that the league is now open
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: "Signups for the current league have been opened!",
+						},
+					})
+				} else {
+					//Reply and say that they are already open
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: "The league is already open! Carry on 🍁",
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+				}
+			case "close-signups":
+				//Read metadata for if league signups are open
+				metadataJson, err := os.ReadFile("site/data/metadata.json")
+				if err != nil {
+					log.Println(err)
+					return
+				}
+
+				var metadata map[string]interface{}
+
+				err = json.Unmarshal(metadataJson, &metadata)
+				if err != nil {
+					log.Println(err)
+					return
+				}
+
+				signupStatus := metadata["current_season"].(map[string]interface{})["signups"].(bool)
+
+				if signupStatus {
+					//If true close them
+
+					//Update the signup status
+					metadata["current_season"].(map[string]interface{})["signups"] = false
+
+					//Write back to the JSON data
+					updated_metadata, err := json.MarshalIndent(
+						metadata,
+						"",
+						"    ",
+					)
+					if err != nil {
+						log.Printf("Error Marshalling Updated Metadata: %v\n", err)
+						return
+					}
+
+					err = os.WriteFile(
+						"site/data/metadata.json",
+						updated_metadata,
+						0644,
+					)
+
+					if err != nil {
+						log.Printf("Error writing metadata.json: %v\n", err)
+						return
+					}
+
+					//Reply with a hidden message that the league is now closed
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: "Signups for the current league have been closed!",
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+				} else {
+					//Reply and say that they are already closed
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: "The league is already closed! Carry on 🍁",
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+				}
+			case "new-season":
+
+				//Read metadata for if league signups are open
+				metadataJson, err := os.ReadFile("site/data/metadata.json")
+				if err != nil {
+					log.Println(err)
+					return
+				}
+
+				var metadata map[string]interface{}
+
+				err = json.Unmarshal(metadataJson, &metadata)
+				if err != nil {
+					log.Println(err)
+					return
+				}
+
+				signupStatus := metadata["current_season"].(map[string]interface{})["signups"].(bool)
+
+				if !signupStatus {
+					//If false open them
+
+					//Update the signup status
+					metadata["current_season"].(map[string]interface{})["signups"] = true
+
+					//Write back to the JSON data
+					updated_metadata, err := json.MarshalIndent(
+						metadata,
+						"",
+						"    ",
+					)
+					if err != nil {
+						log.Printf("Error Marshalling Updated Metadata: %v\n", err)
+						return
+					}
+
+					err = os.WriteFile(
+						"site/data/metadata.json",
+						updated_metadata,
+						0644,
+					)
+
+					if err != nil {
+						log.Printf("Error writing metadata.json: %v\n", err)
+						return
+					}
+
+					//Reply with a hidden message that the league is now open
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: fmt.Sprintf("The league is now open! An announcement will be posted in <#%v>", os.Getenv("SIGNUP_CHNL_ID")),
+						},
+					})
+
+					//Make league opening announcement
+					embed := &discordgo.MessageEmbed{
+						Title:       "🍁⚔️ Olympia Canadian Highlander League Signups Are Now OPEN! 👊🍁",
+						Description: "Season 7",
+						Fields: []*discordgo.MessageEmbedField{
+							{
+								Value: "Welcome to Olympia Canlander Season 7.\n" +
+									"The league will be running from 05/21/2026 until 06/21/2026. \n\n" +
+									"📝 | Signup using `/signup battler` or `/signup jammer`. Battlers must submit their decklist before the season begins.\n\n" +
+									"📖 | [RULES](https://docs.google.com/document/d/1RZqrqEkHq-7VvKPMwbnqLxN6dfciJkXXuS5MKVr-KNI/edit?usp=sharing) | You can find the full rules for this season here or by using the `/rules` command.\n",
+								Inline: true,
+							},
+						},
+						Color: 0xD80621, // Canadian Flag Red 🍁
+					}
+
+					_, err_announce := s.ChannelMessageSendComplex(
+						os.Getenv("SIGNUP_CHNL_ID"),
+
+						&discordgo.MessageSend{
+							Content: "@everyone",
+
+							Embeds: []*discordgo.MessageEmbed{
+								embed,
+							},
+
+							AllowedMentions: &discordgo.MessageAllowedMentions{
+								Parse: []discordgo.AllowedMentionType{
+									discordgo.AllowedMentionTypeEveryone,
+								},
+							},
+						},
+					)
+
+					if err_announce != nil {
+						log.Printf("Error making League Opening Announcement: %v\n", err_announce)
+						return
+					}
+				} else {
+					//Reply and say that they are already open
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: "The current league is already open! Carry on 🍁",
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+				}
+			}
+		case "round":
+			sub := i.ApplicationCommandData().Options[0].Name
+			switch sub {
+			case "new":
+				//Generate pairings using current standings. Assign matchups. Assign byes. Constructs round structure to seasons.json
+			case "post":
+				//Post in weekly-matches the current round structure
+			case "close":
+				//ENDs the round.
+				//How do we handle unreported matches?
+			case "reminder":
+				//Posts reminder for unreported matchest in weekly-matches
+			}
+		case "match":
+			sub := i.ApplicationCommandData().Options[0].Name
+			switch sub {
+			case "edit":
+				//Revise a match using its matchID
+			case "delete":
+				//Remove a match from database using its matchID
+			}
+		case "admin-player":
+			sub := i.ApplicationCommandData().Options[0].Name
+			switch sub {
+			case "signup":
+				//Admin version of signup for selected player
+			case "drop":
+				//Admin version of drop for selected player
+			case "decklist-review":
+				//Decklist review for current season
+			case "points-modify":
+				//Manually modifies points of a specified player
+			case "info":
+				//Generates player info for a specified player
 			}
 		}
 	})

@@ -106,25 +106,25 @@ Short description of what the command does.
 
 ---
 
-#### `/player signup` 🟥
+#### `/admin-player signup` 🟥
 **Description:**  Admin verion of the signup command. Allows selection of battler/jammer
 
 ---
 
-#### `/player drop` 🟥
+#### `/admin-player drop` 🟥
 **Description:**  Drops a player from the current league season
 
 ---
 
-#### `/player decklist-review` 🟥
+#### `/admin-player decklist-review` 🟥
 **Description:**  Allows an organizer to review a submitted decklist. 
 
 ---
 
-#### `/player points-add` 🟥
+#### `/admin-player points-add` 🟥
 **Description:**  Manually adds league points to a player
 
 ---
 
-#### `/player info` 🟥
+#### `/admin-player info` 🟥
 **Description:**  Replies with a players role, current record, decklist, match history?
