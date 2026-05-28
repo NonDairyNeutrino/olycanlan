@@ -7,3 +7,81 @@ Discord bot to help manage the Olympia Canadian Highlander League
 - **Round Pairings.** Assign pairings every two weeks (every other Monday) based on current league record using typical tournament logic. Post in a channel the pairings (ideally with tags for players). Send reminder in channel a few days before round finish for unreported matches. Add ability to drop a player from the league and re-asdign pairings.
 - **Manage League Signups.** Intake signups (no system currently, emotes?) for league. For participants gather/maintain decklists (possible to QA for points??). 
 - **General League Announcements.** Including semi-regular point announcement, and standings at the end. Winner(s) announcement. Share decklists once league is finished.
+
+## Slash Commands Heirarchy
+Finished commands have 🟩
+
+Developed commands have 🟨
+
+Nonstarted commands have 🟥
+
+
+#### `/command-name` 🟩🟨🟥
+**Required Roles:** (if applicable)  
+**Description:**  
+Short description of what the command does.
+
+---
+
+### **PLAYER COMMANDS**
+
+
+#### `/result` 🟨
+
+**Required Roles:** Battler & Jammer  
+**Description:**  Records a completed match result. Collects winner, loser, record, type (bounty/non-bounty) and generates a matchID. Adds match to matches data.
+
+---
+
+#### `/signup battler` 🟨
+
+**Description:**  Registers the command giver as a Battler for the current season and assigns the correct role. Usable only while signups are OPEN.
+
+---
+
+#### `/signup jammer` 🟨
+
+**Description:**  Registers the command giver as a Jammer for the current season and assigns the correct role. Usable only while signups are OPEN.
+
+---
+
+#### `/signup decklist` 🟨
+
+**Required Roles:** Battler
+**Description:**  Stores or updates the Battler's submitted decklist for the season. Pings organizer to review for point spread.
+
+---
+
+#### `/drop` 🟥
+
+**Required Roles:** Battler & Jammer
+**Description:**  Removes a player from the current season. Indicates in their player data that they are inactive for future rounds.
+
+---
+
+### **ADMIN COMMANDS**
+
+- /league
+  - open-signups 🟨
+  - close-signups 🟨
+  - new-season 🟥
+  - drop-player 🟥
+
+- /round
+  - new 🟥
+  - post 🟥
+  - close 🟥
+  - reminder 🟥
+
+- /match
+  - edit 🟥
+  - delete 🟥
+
+- /player
+  - signup
+  - role
+  - drop
+  - decklist-review
+  - points-add
+  - points-set
+  - info
