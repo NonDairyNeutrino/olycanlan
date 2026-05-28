@@ -61,17 +61,17 @@ Short description of what the command does.
 
 ### **ADMIN COMMANDS**
 
-#### `/leauge open-signups` 🟨
+#### `/league open-signups` 🟨
 **Description:**  Opens league registration, enabling player signups and updating system state to allow role assignment and enrollment actions.
 
 ---
 
-#### `/leauge close-signups` 🟨
+#### `/league close-signups` 🟨
 **Description:**  Closes league registration, disabling player signups and updating system state to allow role assignment and enrollment actions.
 
 ---
 
-#### `/leauge new-season` 🟥
+#### `/league new-season` 🟥
 **Description:**  Initializes a new season. Clears current season match history, resets player roles, makes new season announcement.
 
 ---
@@ -111,11 +111,6 @@ Short description of what the command does.
 
 ---
 
-#### `/player role` 🟥
-**Description:**  Changes a players role within the current season, battler/jammer
-
----
-
 #### `/player drop` 🟥
 **Description:**  Drops a player from the current league season
 
@@ -128,11 +123,6 @@ Short description of what the command does.
 
 #### `/player points-add` 🟥
 **Description:**  Manually adds league points to a player
-
----
-
-#### `/player points-set` 🟥
-**Description:**  Manually sets the league points of a player
 
 ---
 

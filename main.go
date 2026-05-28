@@ -268,7 +268,7 @@ var commands = []*discordgo.ApplicationCommand{
 		},
 	},
 
-	//Signup (battler, jammer, open, close)
+	//Signup (battler, jammer, decklist)
 	{Name: "signup",
 		Description: "League signup commands",
 
@@ -285,31 +285,269 @@ var commands = []*discordgo.ApplicationCommand{
 			},
 			{
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
-				Name:        "open",
-				Description: "Open the current season for signups",
-			},
-			{
-				Type:        discordgo.ApplicationCommandOptionSubCommand,
-				Name:        "close",
-				Description: "Closes the current season for signups",
+				Name:        "decklist",
+				Description: "Submit or update your decklist as a Battler ⚔️",
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Type:        discordgo.ApplicationCommandOptionString,
+						Name:        "url",
+						Description: "Decklist URL (Moxfield or similar)",
+						Required:    true,
+					},
+					{
+						Type:        discordgo.ApplicationCommandOptionString,
+						Name:        "name",
+						Description: "Deck Name (Optional)",
+						Required:    false,
+					},
+				},
 			},
 		},
 	},
 
-	//Season commands (drop, new, rules)
-	{Name: "season",
-		Description: "Season commands",
+	//Drop command for player self-elected drops
+	{Name: "drop",
+		Description: "Drop yourself from the current league season",
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionString,
+				Name:        "reason",
+				Description: "Reason for leaving (Optional)",
+				Required:    false,
+			},
+		},
+	},
+
+	//League commands (open-signups, close-signups, new-season)
+	{Name: "league",
+		Description: "Admin League Commands. Open/Close Signups. Start new season.",
 
 		Options: []*discordgo.ApplicationCommandOption{
 			{
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
-				Name:        "drop",
-				Description: "Drop from the current league season",
+				Name:        "open-signups",
+				Description: "Opens league registration for battlers.",
 			},
 			{
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Name:        "close-signups",
+				Description: "Closes league registration for battlers.",
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Name:        "new-season",
+				Description: "Initializes a new season.",
+			},
+		},
+	},
+
+	//Round commands (new, post, close, reminder)
+	{Name: "round",
+		Description: "Admin Round Commands. Make new round. Post Reminders.",
+
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
 				Name:        "new",
-				Description: "Begins a new season of the league",
+				Description: "Generates pairings for new league round.",
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Name:        "post",
+				Description: "Posts current pairings to weekly-matches channel.",
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Name:        "close",
+				Description: "Closes/Ends the current round.",
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Name:        "reminder",
+				Description: "Posts a reminder for unreported matches to weekly-matches channel.",
+			},
+		},
+	},
+
+	//Match commands (edit, delete)
+	{Name: "match",
+		Description: "Admin Match Commands. Edit/delete match data.",
+
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Name:        "edit",
+				Description: "Revise the result of a match using its matchID.",
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Type:        discordgo.ApplicationCommandOptionString,
+						Name:        "matchid",
+						Description: "MatchID",
+						Required:    true,
+					},
+					{
+						Type:        discordgo.ApplicationCommandOptionUser,
+						Name:        "winner",
+						Description: "Winning Player",
+						Required:    false,
+					},
+					{
+						Type:        discordgo.ApplicationCommandOptionUser,
+						Name:        "loser",
+						Description: "Losing Player",
+						Required:    false,
+					},
+					{
+						Type:        discordgo.ApplicationCommandOptionString,
+						Name:        "result",
+						Description: "Match Result",
+						Required:    false,
+						Choices: []*discordgo.ApplicationCommandOptionChoice{
+							{
+								Name:  "3-0",
+								Value: "3-0",
+							},
+							{
+								Name:  "2-1",
+								Value: "2-1",
+							},
+							{
+								Name:  "Concession",
+								Value: "0-0",
+							},
+						},
+					},
+					{
+						Type:        discordgo.ApplicationCommandOptionBoolean,
+						Name:        "bounty",
+						Description: "Was this a bounty match?",
+						Required:    false,
+					},
+				},
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Name:        "delete",
+				Description: "Posts current pairings to weekly-matches channel.",
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Type:        discordgo.ApplicationCommandOptionString,
+						Name:        "matchid",
+						Description: "MatchID",
+						Required:    true,
+					},
+				},
+			},
+		},
+	},
+
+	//Admin Player Commands (signup, drop, decklist-review, points-add, points-set, info)
+	{Name: "player",
+		Description: "Admin Player Commands",
+
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Name:        "signup",
+				Description: "Admin signup for a specified player.",
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Type:        discordgo.ApplicationCommandOptionUser,
+						Name:        "player",
+						Description: "Player",
+						Required:    true,
+					},
+					{
+						Type:        discordgo.ApplicationCommandOptionString,
+						Name:        "role",
+						Description: "Role Assigned",
+						Required:    true,
+						Choices: []*discordgo.ApplicationCommandOptionChoice{
+							{
+								Name:  "battler",
+								Value: "Battler ⚔️",
+							},
+							{
+								Name:  "jammer",
+								Value: "Jammer 👊",
+							},
+						},
+					},
+				},
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Name:        "drop",
+				Description: "Drops specified player from the league.",
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Type:        discordgo.ApplicationCommandOptionUser,
+						Name:        "player",
+						Description: "Player",
+						Required:    true,
+					},
+				},
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Name:        "decklist-review",
+				Description: "Decklist review submission for specified player.",
+
+				//THIS WILL LIKELY NEED MORE OPTIONS
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Type:        discordgo.ApplicationCommandOptionUser,
+						Name:        "player",
+						Description: "Player",
+						Required:    true,
+					},
+				},
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Name:        "points-change",
+				Description: "Changes the league points of a specified player",
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Type:        discordgo.ApplicationCommandOptionUser,
+						Name:        "player",
+						Description: "Player",
+						Required:    true,
+					},
+					{
+						Type:        discordgo.ApplicationCommandOptionString,
+						Name:        "type",
+						Description: "Add, Subtract, or Set?",
+						Required:    true,
+						Choices: []*discordgo.ApplicationCommandOptionChoice{
+							{
+								Name:  "add",
+								Value: "Add",
+							},
+							{
+								Name:  "subtract",
+								Value: "Subtract",
+							},
+							{
+								Name:  "set",
+								Value: "Set",
+							},
+						},
+					},
+				},
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Name:        "info",
+				Description: "Posts current league info for specified player.",
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Type:        discordgo.ApplicationCommandOptionUser,
+						Name:        "player",
+						Description: "Player",
+						Required:    true,
+					},
+				},
 			},
 		},
 	},
@@ -385,7 +623,6 @@ func main() {
 	//SLASH COMMAND TESTING GROUNDS
 
 	//Slash command handler.
-	// Add new slash commands as new case: "command"
 	discord.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		//Ensures its a slash command
 		if i.Type != discordgo.InteractionApplicationCommand {
@@ -910,6 +1147,8 @@ func main() {
 		}
 	})
 
+	//---------------------------------------------------------------------//
+	// OLD Schema (non slash command)
 	//---------------------------------------------------------------------//
 	//List of commands and descriptions. Calls to this string array when interpreting a message, so add it to here first then use logic from the array (see others)
 	prefix_commands := [][]string{
