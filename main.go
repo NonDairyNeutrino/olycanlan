@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	neturl "net/url"
 	"os"
 	"os/signal"
 	"regexp"
@@ -871,7 +872,7 @@ func main() {
 						"decklist": map[string]interface{}{
 							"url":      "Not Submitted",
 							"name":     "",
-							"reviewed": false,
+							"approved": false,
 						},
 						"dropped":      false,
 						"opponents":    []interface{}{},
@@ -1000,7 +1001,7 @@ func main() {
 						"decklist": map[string]interface{}{
 							"url":      "Not Submitted",
 							"name":     "",
-							"reviewed": false,
+							"approved": false,
 						},
 						"dropped":      false,
 						"opponents":    []interface{}{},
@@ -1176,6 +1177,22 @@ func main() {
 
 				}
 
+				//Normalize the URL formatting
+				if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
+					url = "https://" + url
+				}
+				_, err := neturl.ParseRequestURI(url)
+				if err != nil {
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: fmt.Sprintf("The URL provided is invalid. Please resubmit `/signup decklist` with a valid URL.\n%v", url),
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+
 				//Mutex Lock the botData for writing
 				botData.Mutex.Lock()
 
@@ -1196,22 +1213,42 @@ func main() {
 				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
-						Content: fmt.Sprintf("Your decklist has been submitted.\n%v | %v", name, url),
+						Content: fmt.Sprintf("Your decklist has been submitted.\n[%v](%v)", name, url),
 						Flags:   discordgo.MessageFlagsEphemeral,
 					},
 				})
 
-				//Send message that decklist is ready in admin channel
-				msg, err := s.ChannelMessageSend(
+				//Send message that the decklist is ready for review in admin channel
+				embed := &discordgo.MessageEmbed{
+					Title:       "Decklist Review Needed",
+					Description: fmt.Sprintf("<@%v> submitted a decklist for review", i.Member.User.ID),
+					Fields: []*discordgo.MessageEmbedField{
+						{
+							Name:   "Deck",
+							Value:  fmt.Sprintf("[%s](%s)", name, url),
+							Inline: true,
+						},
+					},
+					Footer: &discordgo.MessageEmbedFooter{
+						Text: i.Member.User.ID,
+					},
+					Color: 0xD80621, // Canadian Flag Red 🍁
+				}
+
+				//Send message in Bounty Board channel
+				msg, err := s.ChannelMessageSendComplex(
 					os.Getenv("ADMIN_CHNL_ID"),
-					fmt.Sprintf("<@&%v>\n<@%v> has submitted their decklist for review.\n%v | %v\n\nReact with a ✅ to approve or a ⛔ to deny", os.Getenv("ORGANIZER_ID"), i.Member.User.ID, name, url),
+					&discordgo.MessageSend{
+						Content: fmt.Sprintf("<@&%v>", os.Getenv("ORGANIZER_ID")),
+						Embed:   embed,
+					},
 				)
 				if err != nil {
 					log.Printf("Error sending message in admin channel: %v", err)
 					return
 				}
-				_ = s.MessageReactionAdd(os.Getenv("ADMIN_CHNL_ID"), msg.ID, "✅")
-				_ = s.MessageReactionAdd(os.Getenv("ADMIN_CHNL_ID"), msg.ID, "⛔")
+				_ = s.MessageReactionAdd(os.Getenv("ADMIN_CHNL_ID"), msg.ID, "🔍")
+				_ = s.MessageReactionAdd(os.Getenv("ADMIN_CHNL_ID"), msg.ID, "❌")
 
 				return
 			}
@@ -1570,6 +1607,130 @@ func main() {
 		}
 	})
 
+	//Reaction handler. Used for decklist review, .....
+	discord.AddHandler(func(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
+
+		//Prevents the bot from taking action from messages it reacts to or those outside the admin channel.
+		if r.UserID == s.State.User.ID {
+			return
+		}
+		if r.ChannelID != os.Getenv("ADMIN_CHNL_ID") {
+			return
+		}
+
+		//if reaction is on the decklist review message
+
+		switch r.Emoji.Name {
+		case "🔍":
+			//Retrieve message data
+			msg, err := s.ChannelMessage(r.ChannelID, r.MessageID)
+			if err != nil {
+				return
+			}
+
+			//Sanity checks for message to ensure its the right type
+			//Ensure it has an embed
+			if len(msg.Embeds) == 0 {
+				return
+			}
+			//Ensure it was written by the bot
+			if msg.Author.ID != s.State.User.ID {
+				return
+			}
+			//Ensure it is a "Decklist Review" msg
+			if msg.Embeds[0].Title != "Decklist Review Needed" {
+				return
+			}
+			//Ensure it has a footer
+			if msg.Embeds[0].Footer == nil {
+				return
+			}
+
+			//Grab player's userID from the footer of the embeded decklist review msg
+			embed := msg.Embeds[0]
+			playerID := embed.Footer.Text
+
+			//Update the botData and json data
+			//Lock data
+			botData.Mutex.Lock()
+
+			playerDecklistData := botData.Season["season_players"].(map[string]interface{})[playerID].(map[string]interface{})["decklist"].(map[string]interface{})
+
+			playerDecklistData["approved"] = true
+
+			err = saveSeason()
+			//Unlock data BEFORE error
+			botData.Mutex.Unlock()
+			if err != nil {
+				return
+			}
+
+			//DM the player letting them know its been approved.
+			channel, err := s.UserChannelCreate(playerID)
+			if err == nil {
+				s.ChannelMessageSend(
+					channel.ID,
+					"Your decklist for the current season of the Olympia Canadian Highlander League has been approved. Be on the lookout for the first round pairings in the `#weekly-matches` channel!",
+				)
+			}
+
+			embed.Title = "Decklist Approved 🔍"
+			embed.Color = 0x00FF00
+
+			_, _ = s.ChannelMessageEditEmbed(
+				r.ChannelID,
+				r.MessageID,
+				embed,
+			)
+
+		case "❌":
+			//Retrieve message data
+			msg, err := s.ChannelMessage(r.ChannelID, r.MessageID)
+			if err != nil {
+				return
+			}
+
+			//Sanity checks for message to ensure its the right type
+			//Ensure it has an embed
+			if len(msg.Embeds) == 0 {
+				return
+			}
+			//Ensure it was written by the bot
+			if msg.Author.ID != s.State.User.ID {
+				return
+			}
+			//Ensure it is a "Decklist Review" msg
+			if msg.Embeds[0].Title != "Decklist Review Needed" {
+				return
+			}
+			//Ensure it has a footer
+			if msg.Embeds[0].Footer == nil {
+				return
+			}
+
+			//Grab player's userID from the footer of the embeded decklist review msg
+			embed := msg.Embeds[0]
+			playerID := embed.Footer.Text
+
+			//DM the player letting them know its been denied.
+			channel, err := s.UserChannelCreate(playerID)
+			if err == nil {
+				s.ChannelMessageSend(
+					channel.ID,
+					"Your decklist for the current season of the Olympia Canadian Highlander League has been denied. Please use `/signup decklist` to resubmit, or contact an organizer.",
+				)
+			}
+
+			embed.Title = "Decklist Denied ❌"
+			embed.Color = 0xFF0000
+
+			_, _ = s.ChannelMessageEditEmbed(
+				r.ChannelID,
+				r.MessageID,
+				embed,
+			)
+		}
+	})
 	//---------------------------------------------------------------------//
 	// OLD Schema (non slash command)
 	//---------------------------------------------------------------------//

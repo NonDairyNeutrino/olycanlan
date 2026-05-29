@@ -40,6 +40,7 @@
         "162114243557195775": {
             "active": true,
             "decklist": {
+                "approved": true,
                 "name": "Discard Moon",
                 "url": "https://moxfield.com/decks/fa-TvMUddkq1xihS_nUViA"
             },
@@ -62,8 +63,9 @@
         "162114243557195776": {
             "active": true,
             "decklist": {
-                "name": "",
-                "url": "sldfkasdflkja"
+                "approved": true,
+                "name": "Discard Moon 2.0",
+                "url": "https://moxfield.com/decks/fa-TvMUddkq1xihS_nUViA"
             },
             "dropped": false,
             "opponents": [],

@@ -14,7 +14,7 @@ Finished 🟩 | Developed 🟨 | Nonstarted 🟥
 ### **PLAYER COMMANDS**
 
 
-#### `/result` 🟨
+#### `/result` 🟩
 
 **Required Roles:** Battler & Jammer  
 **Description:**  Records a completed match result. Collects winner, loser, record, type (bounty/non-bounty) and generates a matchID. Adds match to matches data.
@@ -33,7 +33,7 @@ Finished 🟩 | Developed 🟨 | Nonstarted 🟥
 
 ---
 
-#### `/signup decklist` 🟥
+#### `/signup decklist` 🟩
 
 **Required Roles:** Battler  
 **Description:**  Stores or updates the Battler's submitted decklist for the season. Pings organizer to review for point spread.
