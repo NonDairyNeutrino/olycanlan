@@ -1445,7 +1445,7 @@ func main() {
 				oldSeasonNum := metaData["season"].(float64)
 
 				if !signupStatus {
-					//If false open them
+					//If false, then new season can be opened
 
 					//Lock the botData
 					botData.Mutex.Lock()
@@ -1499,20 +1499,101 @@ func main() {
 					for id, match := range currentMatches {
 						archiveMatches[id] = match
 					}
+
+					//Clean season.json data. Saving current to archive and making fresh season data
 					//clear current_season
 					seasonMatchesData["matches"] = map[string]interface{}{}
 					//reset matchID counter
 					seasonMetaData := seasonMatchesData["metadata"].(map[string]interface{})
 					seasonMetaData["next_match_id"] = 1
 
+					//Add player data from season.json to historical players.json
+					leagueDataHist := botData.Players["players"].(map[string]interface{})
+					leagueDataSeason := botData.Season["season_players"].(map[string]interface{})
+
+					for id := range leagueDataSeason {
+						//Gather player specific data
+						playerDataSeason := leagueDataSeason[id].(map[string]interface{})
+						playerDataHist := leagueDataHist[id].(map[string]interface{})
+
+						//Establish subsets
+						playerSeasonStandings := playerDataSeason["standings"].(map[string]interface{})
+						playerSeasonDeck := playerDataSeason["decklist"].(map[string]interface{})
+						playerHistRecord := playerDataHist["historical_record"].(map[string]interface{})
+						playerLastDeck := playerDataHist["last_decklist"].(map[string]interface{})
+
+						//Update historical_record
+						playerHistRecord["wins"] =
+							playerHistRecord["wins"].(float64) +
+								playerSeasonStandings["wins"].(float64)
+						playerHistRecord["losses"] =
+							playerHistRecord["losses"].(float64) +
+								playerSeasonStandings["losses"].(float64)
+						playerHistRecord["game_wins"] =
+							playerHistRecord["game_wins"].(float64) +
+								playerSeasonStandings["game_wins"].(float64)
+						playerHistRecord["game_losses"] =
+							playerHistRecord["game_losses"].(float64) +
+								playerSeasonStandings["game_losses"].(float64)
+
+						//Update last_decklist only if they submitted one (as a battler)
+						if playerSeasonDeck["url"] != "" {
+							playerLastDeck["name"] = playerSeasonDeck["name"]
+							playerLastDeck["url"] = playerSeasonDeck["url"]
+						}
+
+						//Update seasons_played
+						seasonsPlayed := playerDataHist["seasons_played"].([]interface{})
+						seasonsPlayed = append(seasonsPlayed, oldSeasonNum)
+						playerDataHist["seasons_played"] = seasonsPlayed
+
+					}
+
+					//save current season data to archive
+					data, err := json.MarshalIndent(
+						botData.Season,
+						"",
+						"    ",
+					)
+					if err != nil {
+						log.Printf("Error marshalling season.json for archive: %v", err)
+						botData.Mutex.Unlock()
+						return
+					}
+					err = os.WriteFile(
+						fmt.Sprintf("site/data/archive/season-%v.json", oldSeasonNum),
+						data,
+						0644,
+					)
+					if err != nil {
+						log.Printf("Error saving season.json to archive: %v", err)
+						botData.Mutex.Unlock()
+						return
+					}
+					log.Println("season.json archived")
+
+					//reset season data
+					botData.Season = map[string]interface{}{
+						"rounds":         map[string]interface{}{},
+						"season_players": map[string]interface{}{},
+					}
+
 					//Write back to the JSON data
 					err_saveMeta := saveMetadata()
 					err_saveMatches := saveMatches()
+					err_saveSeason := saveSeason()
+					err_savePlayers := savePlayers()
 					botData.Mutex.Unlock()
 					if err_saveMeta != nil {
 						return
 					}
 					if err_saveMatches != nil {
+						return
+					}
+					if err_saveSeason != nil {
+						return
+					}
+					if err_savePlayers != nil {
 						return
 					}
 
