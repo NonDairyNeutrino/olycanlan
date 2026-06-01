@@ -59,8 +59,8 @@ Finished 🟩 | Developed 🟨 | Nonstarted 🟥
 
 ---
 
-#### `/league new-season` 🟨
-**Description:**  Initializes a new season. 🟩Clears current season match history, 🟨resets player roles, makes new season announcement.
+#### `/league new-season` 🟩
+**Description:**  Initializes a new season. Clears current season match history, resets player roles, makes new season announcement.
 
 ---
 
@@ -84,35 +84,30 @@ Finished 🟩 | Developed 🟨 | Nonstarted 🟥
 
 ---
 
-#### `/match edit` 🟥
+#### `/admin match-edit` 🟥
 **Description:**  Allows revision of a match's data using its matchID.
 
 ---
 
-#### `/match delete` 🟥
+#### `/admin match-delete` 🟥
 **Description:**  Removes a match from the matches data using its matchID.
 
 ---
 
-#### `/admin-player signup` 🟥
+#### `/admin player-signup` 🟥
 **Description:**  Admin verion of the signup command. Allows selection of battler/jammer
 
 ---
 
-#### `/admin-player drop` 🟥
+#### `/admin player-drop` 🟥
 **Description:**  Drops a player from the current league season
 
 ---
 
-#### `/admin-player decklist-review` 🟥
-**Description:**  Allows an organizer to review a submitted decklist. 
-
----
-
-#### `/admin-player points-add` 🟥
+#### `/admin player-modify` 🟥
 **Description:**  Manually adds league points to a player
 
 ---
 
-#### `/admin-player info` 🟥
+#### `/admin player-info` 🟥
 **Description:**  Replies with a players role, current record, decklist, match history?

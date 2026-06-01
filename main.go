@@ -449,7 +449,7 @@ var commands = []*discordgo.ApplicationCommand{
 			{
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 				Name:        "delete",
-				Description: "Posts current pairings to weekly-matches channel.",
+				Description: "Deletes a match from dataset using its matchID.",
 				Options: []*discordgo.ApplicationCommandOption{
 					{
 						Type:        discordgo.ApplicationCommandOptionString,
@@ -463,13 +463,13 @@ var commands = []*discordgo.ApplicationCommand{
 	},
 
 	//Admin Player Commands (signup, drop, decklist-review, points-modify, info)
-	{Name: "admin-player",
+	{Name: "admin",
 		Description: "Admin Player Commands",
 
 		Options: []*discordgo.ApplicationCommandOption{
 			{
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
-				Name:        "signup",
+				Name:        "player-signup",
 				Description: "Admin signup for a specified player.",
 				Options: []*discordgo.ApplicationCommandOption{
 					{
@@ -498,7 +498,7 @@ var commands = []*discordgo.ApplicationCommand{
 			},
 			{
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
-				Name:        "drop",
+				Name:        "player-drop",
 				Description: "Drops specified player from the league.",
 				Options: []*discordgo.ApplicationCommandOption{
 					{
@@ -511,22 +511,7 @@ var commands = []*discordgo.ApplicationCommand{
 			},
 			{
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
-				Name:        "decklist-review",
-				Description: "Decklist review submission for specified player.",
-
-				//THIS WILL LIKELY NEED MORE OPTIONS
-				Options: []*discordgo.ApplicationCommandOption{
-					{
-						Type:        discordgo.ApplicationCommandOptionUser,
-						Name:        "player",
-						Description: "Player",
-						Required:    true,
-					},
-				},
-			},
-			{
-				Type:        discordgo.ApplicationCommandOptionSubCommand,
-				Name:        "points-modify",
+				Name:        "player-points",
 				Description: "Changes the league points of a specified player",
 				Options: []*discordgo.ApplicationCommandOption{
 					{
@@ -559,13 +544,77 @@ var commands = []*discordgo.ApplicationCommand{
 			},
 			{
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
-				Name:        "info",
+				Name:        "player-info",
 				Description: "Posts current league info for specified player.",
 				Options: []*discordgo.ApplicationCommandOption{
 					{
 						Type:        discordgo.ApplicationCommandOptionUser,
 						Name:        "player",
 						Description: "Player",
+						Required:    true,
+					},
+				},
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Name:        "match-edit",
+				Description: "Revise the result of a match using its matchID.",
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Type:        discordgo.ApplicationCommandOptionString,
+						Name:        "matchid",
+						Description: "MatchID",
+						Required:    true,
+					},
+					{
+						Type:        discordgo.ApplicationCommandOptionUser,
+						Name:        "winner",
+						Description: "Winning Player",
+						Required:    false,
+					},
+					{
+						Type:        discordgo.ApplicationCommandOptionUser,
+						Name:        "loser",
+						Description: "Losing Player",
+						Required:    false,
+					},
+					{
+						Type:        discordgo.ApplicationCommandOptionString,
+						Name:        "result",
+						Description: "Match Result",
+						Required:    false,
+						Choices: []*discordgo.ApplicationCommandOptionChoice{
+							{
+								Name:  "3-0",
+								Value: "3-0",
+							},
+							{
+								Name:  "2-1",
+								Value: "2-1",
+							},
+							{
+								Name:  "Concession",
+								Value: "0-0",
+							},
+						},
+					},
+					{
+						Type:        discordgo.ApplicationCommandOptionBoolean,
+						Name:        "bounty",
+						Description: "Was this a bounty match?",
+						Required:    false,
+					},
+				},
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Name:        "match-delete",
+				Description: "Deletes a match from dataset using its matchID.",
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Type:        discordgo.ApplicationCommandOptionString,
+						Name:        "matchid",
+						Description: "MatchID",
 						Required:    true,
 					},
 				},
