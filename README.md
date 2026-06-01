@@ -84,8 +84,8 @@ Finished 🟩 | Developed 🟨 | Nonstarted 🟥
 
 ---
 
-#### `/admin match-edit` 🟥
-**Description:**  Allows revision of a match's data using its matchID.
+#### `/admin match-edit` 🟩
+**Description:**  Allows revision of a match's data using its matchID. Potential to edit original message (NEED TO ADD MSGID to /RESULT)
 
 ---
 
@@ -104,8 +104,8 @@ Finished 🟩 | Developed 🟨 | Nonstarted 🟥
 
 ---
 
-#### `/admin player-modify` 🟥
-**Description:**  Manually adds league points to a player
+#### `/admin player-points` 🟥
+**Description:**  Manually adjusts league points to a player
 
 ---
 

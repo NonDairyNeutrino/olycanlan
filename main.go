@@ -390,78 +390,6 @@ var commands = []*discordgo.ApplicationCommand{
 		},
 	},
 
-	//Match commands (edit, delete)
-	{Name: "match",
-		Description: "Admin Match Commands. Edit/delete match data.",
-
-		Options: []*discordgo.ApplicationCommandOption{
-			{
-				Type:        discordgo.ApplicationCommandOptionSubCommand,
-				Name:        "edit",
-				Description: "Revise the result of a match using its matchID.",
-				Options: []*discordgo.ApplicationCommandOption{
-					{
-						Type:        discordgo.ApplicationCommandOptionString,
-						Name:        "matchid",
-						Description: "MatchID",
-						Required:    true,
-					},
-					{
-						Type:        discordgo.ApplicationCommandOptionUser,
-						Name:        "winner",
-						Description: "Winning Player",
-						Required:    false,
-					},
-					{
-						Type:        discordgo.ApplicationCommandOptionUser,
-						Name:        "loser",
-						Description: "Losing Player",
-						Required:    false,
-					},
-					{
-						Type:        discordgo.ApplicationCommandOptionString,
-						Name:        "result",
-						Description: "Match Result",
-						Required:    false,
-						Choices: []*discordgo.ApplicationCommandOptionChoice{
-							{
-								Name:  "3-0",
-								Value: "3-0",
-							},
-							{
-								Name:  "2-1",
-								Value: "2-1",
-							},
-							{
-								Name:  "Concession",
-								Value: "0-0",
-							},
-						},
-					},
-					{
-						Type:        discordgo.ApplicationCommandOptionBoolean,
-						Name:        "bounty",
-						Description: "Was this a bounty match?",
-						Required:    false,
-					},
-				},
-			},
-			{
-				Type:        discordgo.ApplicationCommandOptionSubCommand,
-				Name:        "delete",
-				Description: "Deletes a match from dataset using its matchID.",
-				Options: []*discordgo.ApplicationCommandOption{
-					{
-						Type:        discordgo.ApplicationCommandOptionString,
-						Name:        "matchid",
-						Description: "MatchID",
-						Required:    true,
-					},
-				},
-			},
-		},
-	},
-
 	//Admin Player Commands (signup, drop, decklist-review, points-modify, info)
 	{Name: "admin",
 		Description: "Admin Player Commands",
@@ -1393,6 +1321,26 @@ func main() {
 
 		case "league":
 			sub := i.ApplicationCommandData().Options[0].Name
+
+			//role check here for ADMINS only
+			allowedRoles := []string{
+				os.Getenv("ORGANIZER_ID"),
+			}
+
+			if !memberHasRole(i.Member, allowedRoles) {
+				s.InteractionRespond(
+					i.Interaction,
+					&discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: "Only admins/organizers may complete this command. Carry on 🍁!",
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					},
+				)
+				return
+			}
+
 			switch sub {
 			case "open-signups":
 
@@ -1716,6 +1664,26 @@ func main() {
 			}
 		case "round":
 			sub := i.ApplicationCommandData().Options[0].Name
+
+			//role check here for ADMINS only
+			allowedRoles := []string{
+				os.Getenv("ORGANIZER_ID"),
+			}
+
+			if !memberHasRole(i.Member, allowedRoles) {
+				s.InteractionRespond(
+					i.Interaction,
+					&discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: "Only admins/organizers may complete this command. Carry on 🍁!",
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					},
+				)
+				return
+			}
+
 			switch sub {
 			case "new":
 				//Generate pairings using current standings. Assign matchups. Assign byes. Constructs round structure to seasons.json
@@ -1727,27 +1695,153 @@ func main() {
 			case "reminder":
 				//Posts reminder for unreported matchest in weekly-matches
 			}
-		case "match":
+		case "admin":
 			sub := i.ApplicationCommandData().Options[0].Name
-			switch sub {
-			case "edit":
-				//Revise a match using its matchID
-			case "delete":
-				//Remove a match from database using its matchID
+
+			//role check here for ADMINS only
+			allowedRoles := []string{
+				os.Getenv("ORGANIZER_ID"),
 			}
-		case "admin-player":
-			sub := i.ApplicationCommandData().Options[0].Name
+
+			if !memberHasRole(i.Member, allowedRoles) {
+				s.InteractionRespond(
+					i.Interaction,
+					&discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: "Only admins/organizers may complete this command. Carry on 🍁!",
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					},
+				)
+				return
+			}
+
 			switch sub {
-			case "signup":
+			case "player-signup":
 				//Admin version of signup for selected player
-			case "drop":
+			case "player-drop":
 				//Admin version of drop for selected player
-			case "decklist-review":
-				//Decklist review for current season
-			case "points-modify":
+			case "player-points":
 				//Manually modifies points of a specified player
-			case "info":
+			case "player-info":
 				//Generates player info for a specified player
+			case "match-edit":
+				//Allows revision of a match's data using its matchID.
+
+				//collect options data submitted by command
+				subOptions := i.ApplicationCommandData().Options[0].Options
+
+				matchID := subOptions[0].StringValue()
+
+				//Fetch match data
+				matchesData := botData.Matches["current_season"].(map[string]interface{})["matches"].(map[string]interface{})
+				matchData, exists := matchesData[matchID].(map[string]interface{})
+
+				if !exists {
+					//Match does not exist in database
+					s.InteractionRespond(
+						i.Interaction,
+						&discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Content: fmt.Sprintf("The matchID you submitted was not found: `%v`", matchID),
+								Flags:   discordgo.MessageFlagsEphemeral,
+							},
+						},
+					)
+					return
+				}
+
+				//Current match data
+				currentWinner := matchData["winner"].(string)
+				currentLoser := matchData["loser"].(string)
+				currentResult := matchData["result"].(string)
+				currentBounty := matchData["bounty"].(bool)
+
+				//Gather input data, using current value if not provided
+				winnerRev := currentWinner
+				loserRev := currentLoser
+				resultRev := currentResult
+				bountyRev := currentBounty
+				//Booleans are weird so have to do this way. Pointers?
+				var bounty *bool
+
+				for _, opt := range subOptions {
+					switch opt.Name {
+					case "winner":
+						winnerRev = opt.UserValue(s).ID
+					case "loser":
+						loserRev = opt.UserValue(s).ID
+					case "result":
+						resultRev = opt.StringValue()
+					case "bounty":
+						b := opt.BoolValue()
+						bounty = &b
+					}
+				}
+
+				if bounty != nil {
+					bountyRev = *bounty
+				}
+
+				//check if match details changed at all
+				if winnerRev == currentWinner && loserRev == currentLoser &&
+					resultRev == currentResult && bountyRev == currentBounty {
+					s.InteractionRespond(
+						i.Interaction,
+						&discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Content: fmt.Sprintf("The match details submitted matches the log for `%v`.\nEither the correction was already made, or review your submission and resubmit.", matchID),
+								Flags:   discordgo.MessageFlagsEphemeral,
+							},
+						},
+					)
+					return
+				}
+
+				//if winnerRev == loserRev, either...
+				//new winner = old loser, meaning that new loser = old winner
+				if winnerRev == loserRev && winnerRev == currentLoser {
+					loserRev = currentWinner
+				}
+				//new loser = old winner, meaning that new winner = old loser
+				if winnerRev == loserRev && loserRev == currentWinner {
+					winnerRev = currentLoser
+				}
+
+				//lock bot data
+				botData.Mutex.Lock()
+
+				//reassign values to matchesData
+				matchesData[matchID] = map[string]interface{}{
+					"winner": winnerRev,
+					"loser":  loserRev,
+					"result": resultRev,
+					"bounty": bountyRev,
+				}
+
+				//Save matches
+				err := saveMatches()
+				botData.Mutex.Unlock()
+				if err != nil {
+					return
+				}
+
+				//reply to the user
+				s.InteractionRespond(
+					i.Interaction,
+					&discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: fmt.Sprintf("Match (ID:`%v`) Revised.\nWinner: <@%v> | Loser: <@%v> | Result: %v | Bounty: %v", matchID, winnerRev, loserRev, resultRev, bountyRev),
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					},
+				)
+			case "match-delete":
+				//Removes a match from the matches data using its matchID.
 			}
 		}
 	})
