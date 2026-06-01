@@ -350,6 +350,14 @@ var commands = []*discordgo.ApplicationCommand{
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 				Name:        "new-season",
 				Description: "Initializes a new season.",
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Type:        discordgo.ApplicationCommandOptionString,
+						Name:        "start-date",
+						Description: "Starting Date in MM-DD-YYYY Format",
+						Required:    true,
+					},
+				},
 			},
 		},
 	},
@@ -1340,47 +1348,22 @@ func main() {
 			case "open-signups":
 
 				//Read metadata for if league signups are open
-				metadataJson, err := os.ReadFile("site/data/metadata.json")
-				if err != nil {
-					log.Println(err)
-					return
-				}
-
-				var metadata map[string]interface{}
-
-				err = json.Unmarshal(metadataJson, &metadata)
-				if err != nil {
-					log.Println(err)
-					return
-				}
-
-				signupStatus := metadata["current_season"].(map[string]interface{})["signups"].(bool)
+				metaData := botData.Metadata["current_season"].(map[string]interface{})
+				signupStatus := metaData["signups"].(bool)
 
 				if !signupStatus {
 					//If false open them
 
+					//Lock the botData
+					botData.Mutex.Lock()
+
 					//Update the signup status
-					metadata["current_season"].(map[string]interface{})["signups"] = true
+					metaData["signups"] = true
 
 					//Write back to the JSON data
-					updated_metadata, err := json.MarshalIndent(
-						metadata,
-						"",
-						"    ",
-					)
+					err := saveMetadata()
+					botData.Mutex.Unlock()
 					if err != nil {
-						log.Printf("Error Marshalling Updated Metadata: %v\n", err)
-						return
-					}
-
-					err = os.WriteFile(
-						"site/data/metadata.json",
-						updated_metadata,
-						0644,
-					)
-
-					if err != nil {
-						log.Printf("Error writing metadata.json: %v\n", err)
 						return
 					}
 
@@ -1389,6 +1372,7 @@ func main() {
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: "Signups for the current league have been opened!",
+							Flags:   discordgo.MessageFlagsEphemeral,
 						},
 					})
 				} else {
@@ -1402,48 +1386,36 @@ func main() {
 					})
 				}
 			case "close-signups":
+
 				//Read metadata for if league signups are open
-				metadataJson, err := os.ReadFile("site/data/metadata.json")
-				if err != nil {
-					log.Println(err)
-					return
-				}
-
-				var metadata map[string]interface{}
-
-				err = json.Unmarshal(metadataJson, &metadata)
-				if err != nil {
-					log.Println(err)
-					return
-				}
-
-				signupStatus := metadata["current_season"].(map[string]interface{})["signups"].(bool)
+				metaData := botData.Metadata["current_season"].(map[string]interface{})
+				signupStatus := metaData["signups"].(bool)
 
 				if signupStatus {
 					//If true close them
+					//Lock the botData
+					botData.Mutex.Lock()
 
 					//Update the signup status
-					metadata["current_season"].(map[string]interface{})["signups"] = false
+					metaData["signups"] = false
 
-					//Write back to the JSON data
-					updated_metadata, err := json.MarshalIndent(
-						metadata,
-						"",
-						"    ",
-					)
-					if err != nil {
-						log.Printf("Error Marshalling Updated Metadata: %v\n", err)
-						return
+					//Update the current_players metadata by counting the "active" players in season data
+					seasonPlayers := botData.Season["season_players"].(map[string]interface{})
+					activePlayers := 0
+
+					for _, player := range seasonPlayers {
+						active, _ := player.(map[string]interface{})["active"].(bool)
+						if active {
+							activePlayers++
+						}
 					}
 
-					err = os.WriteFile(
-						"site/data/metadata.json",
-						updated_metadata,
-						0644,
-					)
+					metaData["active_players"] = activePlayers
 
+					//Write back to the JSON data
+					err := saveMetadata()
+					botData.Mutex.Unlock()
 					if err != nil {
-						log.Printf("Error writing metadata.json: %v\n", err)
 						return
 					}
 
@@ -1468,47 +1440,79 @@ func main() {
 			case "new-season":
 
 				//Read metadata for if league signups are open
-				metadataJson, err := os.ReadFile("site/data/metadata.json")
-				if err != nil {
-					log.Println(err)
-					return
-				}
-
-				var metadata map[string]interface{}
-
-				err = json.Unmarshal(metadataJson, &metadata)
-				if err != nil {
-					log.Println(err)
-					return
-				}
-
-				signupStatus := metadata["current_season"].(map[string]interface{})["signups"].(bool)
+				metaData := botData.Metadata["current_season"].(map[string]interface{})
+				signupStatus := metaData["signups"].(bool)
+				oldSeasonNum := metaData["season"].(float64)
 
 				if !signupStatus {
 					//If false open them
 
-					//Update the signup status
-					metadata["current_season"].(map[string]interface{})["signups"] = true
+					//Lock the botData
+					botData.Mutex.Lock()
 
-					//Write back to the JSON data
-					updated_metadata, err := json.MarshalIndent(
-						metadata,
-						"",
-						"    ",
-					)
+					//Update start date
+					//Get input date
+					subOptions := i.ApplicationCommandData().Options[0].Options
+					inputDate := subOptions[0].StringValue()
+
+					//Check date formatting
+					startDate, err := time.Parse("01-02-2006", inputDate)
 					if err != nil {
-						log.Printf("Error Marshalling Updated Metadata: %v\n", err)
+						//Send hidden command to resend with correct date formatting
+						s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Content: fmt.Sprintf("Your submitted date `%v` was not in the correct MM-DD-YYYY format", inputDate),
+								Flags:   discordgo.MessageFlagsEphemeral,
+							},
+						})
+
+						//unlock data before evacuating
+						botData.Mutex.Unlock()
 						return
 					}
 
-					err = os.WriteFile(
-						"site/data/metadata.json",
-						updated_metadata,
-						0644,
-					)
+					//Reformat date for consistency
+					storedDate := startDate.Format(time.RFC3339)
 
-					if err != nil {
-						log.Printf("Error writing metadata.json: %v\n", err)
+					//Write new start date to league
+					metaData["start_date"] = storedDate
+
+					//Update the signup status
+					metaData["signups"] = true
+
+					//Update the current season
+					newSeasonNum := oldSeasonNum + 1
+					metaData["season"] = newSeasonNum
+
+					//Reset the round counter
+					metaData["current_round"] = 0
+
+					//Clean matches.json data, moving matches to archive and resetting metadata
+					seasonMatchesData := botData.Matches["current_season"].(map[string]interface{})
+					currentMatches := seasonMatchesData["matches"].(map[string]interface{})
+
+					archiveRoot := botData.Matches["archive"].(map[string]interface{})
+					archiveMatches := archiveRoot["matches"].(map[string]interface{})
+
+					//move to archive
+					for id, match := range currentMatches {
+						archiveMatches[id] = match
+					}
+					//clear current_season
+					seasonMatchesData["matches"] = map[string]interface{}{}
+					//reset matchID counter
+					seasonMetaData := seasonMatchesData["metadata"].(map[string]interface{})
+					seasonMetaData["next_match_id"] = 1
+
+					//Write back to the JSON data
+					err_saveMeta := saveMetadata()
+					err_saveMatches := saveMatches()
+					botData.Mutex.Unlock()
+					if err_saveMeta != nil {
+						return
+					}
+					if err_saveMatches != nil {
 						return
 					}
 
@@ -1516,26 +1520,36 @@ func main() {
 					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
-							Content: fmt.Sprintf("The league is now open! An announcement will be posted in <#%v>", os.Getenv("SIGNUP_CHNL_ID")),
+							Content: fmt.Sprintf("Olympia Canlander Season %v is now open!\nAn announcement will be posted in <#%v>", newSeasonNum, os.Getenv("SIGNUP_CHNL_ID")),
+							Flags:   discordgo.MessageFlagsEphemeral,
 						},
 					})
 
-					//Make league opening announcement
+					//format a display date
+					//NOT NECESSARY BUT KEEPING FOR NOW -> location, _ := time.LoadLocation("America/Los_Angeles")
+					displayDate := startDate.Format("January 2, 2006")
+
+					//Make league opening announcement embed msg
 					embed := &discordgo.MessageEmbed{
 						Title:       "🍁⚔️ Olympia Canadian Highlander League Signups Are Now OPEN! 👊🍁",
-						Description: "Season 7",
+						Description: fmt.Sprintf("Season %v", newSeasonNum),
 						Fields: []*discordgo.MessageEmbedField{
 							{
-								Value: "Welcome to Olympia Canlander Season 7.\n" +
-									"The league will be running from 05/21/2026 until 06/21/2026. \n\n" +
-									"📝 | Signup using `/signup battler` or `/signup jammer`. Battlers must submit their decklist before the season begins.\n\n" +
-									"📖 | [RULES](https://docs.google.com/document/d/1RZqrqEkHq-7VvKPMwbnqLxN6dfciJkXXuS5MKVr-KNI/edit?usp=sharing) | You can find the full rules for this season here or by using the `/rules` command.\n",
+								Value: fmt.Sprintf(
+									"Welcome to Olympia Canlander Season %v.\n"+
+										"The league will begin on %v. \n\n"+
+										"📝 | Signup using `/signup battler` or `/signup jammer`. Battlers must submit their decklist before the season begins.\n\n"+
+										"📖 | [RULES](https://docs.google.com/document/d/1RZqrqEkHq-7VvKPMwbnqLxN6dfciJkXXuS5MKVr-KNI/edit?usp=sharing) | You can find the full rules for this season here or by typing the `!rules`.\n",
+									newSeasonNum,
+									displayDate,
+								),
 								Inline: true,
 							},
 						},
 						Color: 0xD80621, // Canadian Flag Red 🍁
 					}
 
+					//Post announcement
 					_, err_announce := s.ChannelMessageSendComplex(
 						os.Getenv("SIGNUP_CHNL_ID"),
 
@@ -1558,12 +1572,13 @@ func main() {
 						log.Printf("Error making League Opening Announcement: %v\n", err_announce)
 						return
 					}
+
 				} else {
 					//Reply and say that they are already open
 					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
-							Content: "The current league is already open! Carry on 🍁",
+							Content: "The current league is already open.\nThe current league season must be closed (`/league close-signups`) before a new season can be began.\nCarry on 🍁",
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
 					})

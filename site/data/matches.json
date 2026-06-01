@@ -1,8 +1,5 @@
 {
     "archive": {
-        "matches": {}
-    },
-    "current_season": {
         "matches": {
             "S06-001": {
                 "bounty": true,
@@ -118,14 +115,22 @@
                 "result": "3-0",
                 "winner": "1504687575229665401"
             }
+        }
+    },
+    "current_season": {
+        "matches": {
+            "S08-001": {
+                "bounty": true,
+                "loser": "1504687575229665401",
+                "result": "3-0",
+                "winner": "1504687575229665401"
+            }
         },
         "metadata": {
-            "next_match_id": 20,
-            "season_end": "",
-            "season_start": ""
+            "next_match_id": 2
         }
     },
     "metadata": {
-        "last_updated": "2026-05-29T03:37:49Z"
+        "last_updated": "2026-06-01T07:59:41Z"
     }
 }

@@ -49,18 +49,18 @@ Finished 🟩 | Developed 🟨 | Nonstarted 🟥
 
 ### **ADMIN COMMANDS**
 
-#### `/league open-signups` 🟨
+#### `/league open-signups` 🟩
 **Description:**  Opens league registration, enabling player signups and updating system state to allow role assignment and enrollment actions.
 
 ---
 
-#### `/league close-signups` 🟨
+#### `/league close-signups` 🟩
 **Description:**  Closes league registration, disabling player signups and updating system state to allow role assignment and enrollment actions.
 
 ---
 
-#### `/league new-season` 🟥
-**Description:**  Initializes a new season. Clears current season match history, resets player roles, makes new season announcement.
+#### `/league new-season` 🟨
+**Description:**  Initializes a new season. 🟩Clears current season match history, 🟨resets player roles, makes new season announcement.
 
 ---
 
