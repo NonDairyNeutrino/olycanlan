@@ -7,7 +7,6 @@ import (
 	neturl "net/url"
 	"os"
 	"os/signal"
-	"regexp"
 	"strings"
 	"sync"
 	"syscall"
@@ -580,10 +579,7 @@ func registerCommands(s *discordgo.Session) {
 
 // function for role check for slash commands.
 // returns true if role is met, false if not.
-func memberHasRole(
-	member *discordgo.Member,
-	allowedRoles []string,
-) bool {
+func memberHasRole(member *discordgo.Member, allowedRoles []string) bool {
 	for _, memberRole := range member.Roles {
 
 		for _, allowedRole := range allowedRoles {
@@ -619,9 +615,6 @@ func main() {
 	} else {
 		log.Println("Bot data loaded")
 	}
-
-	//regex to parse only the numbers from a string (for userIDs)
-	userIDRegex := regexp.MustCompile(`[^0-9]+`)
 
 	//---------------------------------------------------------------------//
 	//SLASH COMMAND TESTING GROUNDS
@@ -2719,9 +2712,10 @@ func main() {
 			)
 		}
 	})
+
 	//---------------------------------------------------------------------//
-	// OLD Schema (non slash command)
-	//---------------------------------------------------------------------//
+	//CHAT COMMANDS
+
 	//List of commands and descriptions. Calls to this string array when interpreting a message, so add it to here first then use logic from the array (see others)
 	prefix_commands := [][]string{
 		{"Help", "Provides a list of available commands and their descriptions"},
@@ -2804,246 +2798,6 @@ func main() {
 			return
 		}
 
-	})
-
-	//Handler related to adding reactions. Using as a method to sign up for the league.
-	//Note to add functionality in the future where it instead DMs the user and requests a decklist.
-	discord.AddHandler(func(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
-
-		//Prevents the bot from taking action from messages outside the signup channel.
-		if r.ChannelID != os.Getenv("SIGNUP_CHNL_ID") {
-			return
-		}
-
-		//This prevents the bot from making any action if the message has an ❌ emoji reaction.
-		//The intent is that I can add an ❌ when signups end, stopping all role changes for the league phase.
-		msg, _ := s.ChannelMessage(r.ChannelID, r.MessageID)
-		for _, reaction := range msg.Reactions {
-			if reaction.Emoji.Name == "❌" {
-				return
-			}
-		}
-
-		if r.Emoji.Name == "⚔️" {
-
-			//When someone signs up as a "battler"...
-			// First we have to check if that player has participated in previous leagues (likely)
-			// IF THEY ARE NEW. Gather info about them for players.json (League_Player struct)
-			// IF THEY HAVE PARTICIPATED PREVIOUSLY. Update their discord_name. Grab their last decklist link.
-			// Add them to the "battler" section of the players.json, copying their relevant info if they participated previously
-			// Add the current battler role
-			// DM the player with a notice they have signed up and request they DM the bot their decklist. If participated previously we can include their last known deck link.
-
-			s.GuildMemberRoleAdd(r.GuildID, r.UserID, "1505974853658874050")
-			s.ChannelMessageSend(r.ChannelID, fmt.Sprintf(" <@%v> has been signed up as a Battler ⚔️ for this season!", r.UserID))
-
-			new_signup := League_Player{
-				discord_userid: r.UserID,
-				discord_name:   r.Member.DisplayName(),
-				player_type:    "Battler",
-				decklist:       "",
-			}
-
-			fmt.Println(new_signup)
-
-			channel, err := s.UserChannelCreate(r.UserID)
-			if err != nil {
-				log.Printf("Error creating DM channel: %v\n", err)
-				return
-			}
-			s.ChannelMessageSend(channel.ID, "Thanks for signing up as a Battler ⚔️ for this season of the Olympia Canadian Highlander league!")
-			s.ChannelMessageSend(channel.ID, "Please message me a link to your decklist on Moxfield or anoter deck hosting site.")
-
-			// Something here to capture responses. I think that might have to be above too, since its triggered by a message...
-		}
-		if r.Emoji.Name == "👊" {
-			s.GuildMemberRoleAdd(r.GuildID, r.UserID, "1505977716543848570")
-			s.ChannelMessageSend(r.ChannelID, fmt.Sprintf(" <@%v> has been signed up as a Jammer 👊 for this season!", r.UserID))
-		}
-	})
-
-	//Partner handler for removing reactions to remove/change roles
-	discord.AddHandler(func(s *discordgo.Session, r *discordgo.MessageReactionRemove) {
-
-		//Prevents the bot from taking action from messages outside the signup channel.
-		if r.ChannelID != os.Getenv("SIGNUP_CHNL_ID") {
-			return
-		}
-
-		//This prevents the bot from making any action if the message has an ❌ emoji reaction.
-		//The intent is that I can add an ❌ when signups end, stopping all role changes for the league phase.
-		msg, _ := s.ChannelMessage(r.ChannelID, r.MessageID)
-		for _, reaction := range msg.Reactions {
-			if reaction.Emoji.Name == "❌" {
-				return
-			}
-		}
-
-		if r.Emoji.Name == "⚔️" {
-			s.GuildMemberRoleRemove(r.GuildID, r.UserID, "1505974853658874050")
-			s.ChannelMessageSend(r.ChannelID, fmt.Sprintf(" <@%v> has been removed as a Battler ⚔️ for this season!", r.UserID))
-		}
-		if r.Emoji.Name == "👊" {
-			s.GuildMemberRoleRemove(r.GuildID, r.UserID, "1505977716543848570")
-			s.ChannelMessageSend(r.ChannelID, fmt.Sprintf(" <@%v> has been removed as a Jammer 👊 for this season!", r.UserID))
-		}
-	})
-
-	//Handler for recording match results in the bounty-board channel.
-	discord.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
-
-		//Standard check to prevent loops
-		if m.Author.ID == s.State.User.ID {
-			return
-		}
-
-		//Check if message is within the bounty board channel. ID stored in .env
-		if m.ChannelID != os.Getenv("BOUNTY_CHNL_ID") {
-			return
-		}
-
-		//Parses message
-		msg_args := strings.Split(m.Content, " ")
-		if msg_args[0] == "!result" {
-
-			//Only error check currently, though could be built out to intercept other errors.
-			//Possible other errors: not tagging/userID, match result > 3 games total, Bounty/Non-Bounty not specified or mispelled, etc.
-			if len(msg_args) != 5 {
-				s.ChannelMessageSendReply(m.ChannelID, "Invalid command format. Please use: !result <player1> <score> <player2> <match_type>. Deleting original message", m.Reference())
-				s.ChannelMessageDelete(m.ChannelID, m.ID)
-				return
-			}
-
-			//Construct the match_result struct.
-			match_result := MatchResult{
-				Winner: "",
-				Loser:  "",
-				Result: "",
-				Bounty: false,
-			}
-
-			//Logic to parse the winner and loser based on the game results of the match.
-			result_split := strings.Split(msg_args[2], "-")
-			if result_split[0] > result_split[1] {
-				//Using regex to extract only the numbers from the userID tags. Typical format is <@12345>, so this removes the <@> for better storage.
-				match_result.Winner = userIDRegex.ReplaceAllString(msg_args[1], "")
-				match_result.Loser = userIDRegex.ReplaceAllString(msg_args[3], "")
-				match_result.Result = fmt.Sprintf("%v-%v", result_split[0], result_split[1])
-			} else {
-				match_result.Winner = userIDRegex.ReplaceAllString(msg_args[3], "")
-				match_result.Loser = userIDRegex.ReplaceAllString(msg_args[1], "")
-				match_result.Result = fmt.Sprintf("%v-%v", result_split[1], result_split[0])
-			}
-
-			//Logic to determine if the match was bounty. Default is false.
-			if msg_args[4] == "Bounty" {
-				match_result.Bounty = true
-			}
-
-			//Read matches.json
-			matches_json, err := os.ReadFile("site/data/matches.json")
-			if err != nil {
-				log.Printf("Error reading matches.json: %v\n", err)
-				return
-			}
-
-			var matches_data map[string]interface{}
-
-			err = json.Unmarshal(matches_json, &matches_data)
-			if err != nil {
-				log.Printf("Error unmarshalling matches.json: %v\n", err)
-				return
-			}
-
-			//Read metadata.json
-			metadata_json, err := os.ReadFile("site/data/metadata.json")
-			if err != nil {
-				log.Printf("Error reading metadata.json: %v\n", err)
-				return
-			}
-
-			var metadata map[string]interface{}
-
-			err = json.Unmarshal(metadata_json, &metadata)
-			if err != nil {
-				log.Printf("Error unmarshalling metadata.json: %v\n", err)
-				return
-			}
-
-			//Get season number & make prefix
-			current_season := int(metadata["current_season"].(map[string]interface{})["season"].(float64))
-			season_prefix := fmt.Sprintf("S%02d", current_season)
-
-			//Read current season matches & metadata
-			current_season_matches := matches_data["current_season"].(map[string]interface{})["matches"].(map[string]interface{})
-
-			current_season_metadata := matches_data["current_season"].(map[string]interface{})["metadata"].(map[string]interface{})
-
-			//construct the next match id of form S06-001
-			next_match_id := int(current_season_metadata["next_match_id"].(float64))
-			new_match_id := fmt.Sprintf("%s-%03d",
-				season_prefix,
-				next_match_id)
-
-			//add the new match result to the json data
-			current_season_matches[new_match_id] = map[string]interface{}{
-				"winner": match_result.Winner,
-				"loser":  match_result.Loser,
-				"result": match_result.Result,
-				"bounty": match_result.Bounty,
-			}
-
-			//increment next_match_id
-			current_season_metadata["next_match_id"] = next_match_id + 1
-
-			//Update the last update time
-			matches_data["metadata"].(map[string]interface{})["last_updated"] =
-				time.Now().UTC().Format(time.RFC3339)
-
-			//Write back to the JSON data
-			updated_matches_json, err := json.MarshalIndent(
-				matches_data,
-				"",
-				"    ",
-			)
-			if err != nil {
-				log.Printf("Error Marshalling Updated Matches Data: %v\n", err)
-				return
-			}
-
-			err = os.WriteFile(
-				"site/data/matches.json",
-				updated_matches_json,
-				0644,
-			)
-
-			if err != nil {
-				log.Printf("Error writing matches.json: %v\n", err)
-				return
-			}
-
-			//construct the embedded message from the match result.
-			embed := &discordgo.MessageEmbed{
-				Title: "Match Result Recorded",
-				Fields: []*discordgo.MessageEmbedField{
-					{
-						Name:   match_result.Result,
-						Value:  fmt.Sprintf("<@%v> WON vs <@%v>", match_result.Winner, match_result.Loser),
-						Inline: true,
-					},
-				},
-				Footer: &discordgo.MessageEmbedFooter{
-					Text: fmt.Sprintf("Bounty: %v", match_result.Bounty),
-				},
-				Color: 0xD80621, // Canadian Flag Red 🍁
-			}
-			//Send embedded message
-			s.ChannelMessageSendEmbed(m.ChannelID, embed)
-
-			//Currently just prints the result to the terminal.
-			//Maybe this is where it will feed into the website?
-			fmt.Println(match_result)
-		}
 	})
 
 	//---------------------------------------------------------------------//
