@@ -45,6 +45,9 @@
                 "url": "https://moxfield.com/decks/fa-TvMUddkq1xihS_nUViA"
             },
             "dropped": false,
+            "pairings": [
+                "222215591765868544"
+            ],
             "opponents": [
                 "222215591765868544",
                 "333333333333333333",
@@ -68,6 +71,7 @@
                 "url": "https://moxfield.com/decks/fa-TvMUddkq1xihS_nUViA"
             },
             "dropped": false,
+            "pairings": [],
             "opponents": [],
             "received_bye": false,
             "role": "battler",

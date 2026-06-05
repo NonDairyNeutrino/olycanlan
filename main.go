@@ -449,6 +449,12 @@ var commands = []*discordgo.ApplicationCommand{
 						Required:    true,
 					},
 					{
+						Type:        discordgo.ApplicationCommandOptionInteger,
+						Name:        "points",
+						Description: "Points",
+						Required:    true,
+					},
+					{
 						Type:        discordgo.ApplicationCommandOptionString,
 						Name:        "type",
 						Description: "Add, Subtract, or Set?",
@@ -467,12 +473,6 @@ var commands = []*discordgo.ApplicationCommand{
 								Value: "set",
 							},
 						},
-					},
-					{
-						Type:        discordgo.ApplicationCommandOptionInteger,
-						Name:        "points",
-						Description: "Points",
-						Required:    true,
 					},
 				},
 			},
@@ -880,6 +880,7 @@ func main() {
 							"approved": false,
 						},
 						"dropped":      false,
+						"pairings":     []interface{}{},
 						"opponents":    []interface{}{},
 						"received_bye": false,
 						"role":         "battler",
@@ -1009,6 +1010,7 @@ func main() {
 							"approved": false,
 						},
 						"dropped":      false,
+						"pairings":     []interface{}{},
 						"opponents":    []interface{}{},
 						"received_bye": false,
 						"role":         "jammer",
@@ -1819,6 +1821,7 @@ func main() {
 								"approved": false,
 							},
 							"dropped":      false,
+							"pairings":     []interface{}{},
 							"opponents":    []interface{}{},
 							"received_bye": false,
 							"role":         "battler",
@@ -1949,6 +1952,7 @@ func main() {
 								"approved": false,
 							},
 							"dropped":      false,
+							"pairings":     []interface{}{},
 							"opponents":    []interface{}{},
 							"received_bye": false,
 							"role":         "jammer",
@@ -2112,7 +2116,217 @@ func main() {
 				}
 			case "player-points": //Manually modifies points of a specified player
 
+				//Gather info submitted in command
+				subOptions := i.ApplicationCommandData().Options[0].Options
+
+				//Player
+				player := subOptions[0].UserValue(s)
+
+				//Points
+				newPoints := float64(subOptions[1].IntValue())
+
+				//Action
+				action := subOptions[2].StringValue()
+
+				//Get Player data
+				botData.Mutex.Lock()
+
+				seasonPlayers := botData.Season["season_players"].(map[string]interface{})
+
+				//Logic check if player already in season data
+				existingSeasonPlayer, exists := seasonPlayers[player.ID]
+				if !exists {
+					//player does not exist in seasonal data.
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: fmt.Sprintf("No seasonal player data found for <@%v>", player.ID),
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					botData.Mutex.Unlock()
+					return
+				}
+
+				playerSeasonData := existingSeasonPlayer.(map[string]interface{})
+				playerSeasonStandings := playerSeasonData["standings"].(map[string]interface{})
+
+				//Adjust points
+				originalPoints := playerSeasonStandings["points"].(float64)
+				adjustedPoints := float64(0)
+				switch action {
+				case "add": // add submitted points
+					adjustedPoints = originalPoints + newPoints
+					playerSeasonStandings["points"] = adjustedPoints
+				case "subtract": // subtract submitted points
+					adjustedPoints = originalPoints - newPoints
+					//correct for negative points
+					if adjustedPoints < 0 {
+						adjustedPoints = 0
+					}
+					playerSeasonStandings["points"] = adjustedPoints
+				case "set": // set points to submitted value
+					adjustedPoints = newPoints
+					//correct for negative points
+					if adjustedPoints < 0 {
+						adjustedPoints = 0
+					}
+					playerSeasonStandings["points"] = adjustedPoints
+				}
+
+				//save the season
+				err := saveSeason()
+				botData.Mutex.Unlock()
+				if err != nil {
+					return
+				}
+
+				//Reply to admin
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: fmt.Sprintf("<@%v> has had their league points adjusted to `%v` from `%v`.\nA message will be posted in <#%s>", player.ID, adjustedPoints, originalPoints, os.Getenv("ADMIN_CHNL_ID")),
+						Flags:   discordgo.MessageFlagsEphemeral,
+					},
+				})
+
+				//Make post in admin channel
+				s.ChannelMessageSend(
+					os.Getenv("ADMIN_CHNL_ID"),
+					fmt.Sprintf("<@&%v>\n<@%v> points adjusted by <@%v>:\n   *`%v` -> `%v` (%v %v)*",
+						os.Getenv("ORGANIZER_ID"),
+						player.ID,
+						i.Member.User.ID,
+						originalPoints,
+						adjustedPoints,
+						action,
+						newPoints),
+				)
+
 			case "player-info": //Generates player info for a specified player
+
+				//Gather info submitted in command
+				subOptions := i.ApplicationCommandData().Options[0].Options
+
+				//Player
+				player := subOptions[0].UserValue(s)
+
+				//Get Player data
+				botData.Mutex.Lock()
+
+				seasonPlayers := botData.Season["season_players"].(map[string]interface{})
+				histPlayers := botData.Players["players"].(map[string]interface{})
+
+				//Logic check if player already in season data
+				existingSeasonPlayer, exists_season := seasonPlayers[player.ID]
+
+				//Construct season part of msg
+				seasonMsg := fmt.Sprintf("No seasonal data found for <@%v>", player.ID)
+				//If player exists revise seasonMsg to include data
+				if exists_season {
+					playerSeasonData := existingSeasonPlayer.(map[string]interface{})
+					playerStandings := playerSeasonData["standings"].(map[string]interface{})
+
+					//Seasonal Data
+					role := playerSeasonData["role"]
+					//decklist logic. Only get decklist for battlers
+					decklistMsg := "N/A"
+					if role == "battler" {
+						decklist_url := playerSeasonData["decklist"].(map[string]interface{})["url"].(string)
+						decklist_name := playerSeasonData["decklist"].(map[string]interface{})["name"].(string)
+						decklistMsg = fmt.Sprintf("[%s](%s)", decklist_name, decklist_url)
+					}
+
+					points := playerStandings["points"]
+					mWins := playerStandings["wins"]
+					mLosses := playerStandings["losses"]
+					gWins := playerStandings["game_wins"]
+					gLosses := playerStandings["game_losses"]
+
+					active := playerSeasonData["active"].(bool)
+					dropped := playerSeasonData["dropped"].(bool)
+					received_bye := playerSeasonData["received_bye"].(bool)
+
+					//Construct a list of opponents for message that links
+					opponents := playerSeasonData["opponents"].([]interface{})
+					var oppMentions []string
+					for _, opp := range opponents {
+						oppMentions = append(oppMentions, fmt.Sprintf("<@%s>", opp.(string)))
+					}
+					opponentsMsg := strings.Join(oppMentions, ", ")
+
+					//Construct season data formatted string
+					seasonMsg = fmt.Sprintf("Role: %v | Decklist: %v\nPoints: %v | Record: %v-%v (Games: %v-%v)\nActive: %v | Dropped: %v | Bye?: %v\nOpponents: %v",
+						role, decklistMsg,
+						points, mWins, mLosses, gWins, gLosses,
+						active, dropped, received_bye,
+						opponentsMsg)
+				}
+
+				//Logic check if player already in season data
+				existingHistoricalPlayer, exists_hist := histPlayers[player.ID]
+
+				//Construct season part of msg
+				histMsg := fmt.Sprintf("No historical data found for <@%v>", player.ID)
+				//If player exists revise histMsg to include data
+				if exists_hist {
+					playerHistData := existingHistoricalPlayer.(map[string]interface{})
+					playerHistRecord := playerHistData["historical_record"].(map[string]interface{})
+
+					//Hist Data
+					mWinsHist := playerHistRecord["wins"]
+					mLossesHist := playerHistRecord["losses"]
+					gWinsHist := playerHistRecord["game_wins"]
+					gLossesHist := playerHistRecord["game_losses"]
+
+					//Construct a list of seasons played
+					playedSeasons := playerHistData["seasons_played"].([]interface{})
+					var seasonsStrings []string
+					for _, seas := range playedSeasons {
+						seasonsStrings = append(seasonsStrings, fmt.Sprintf("S%.0f", seas.(float64)))
+					}
+					playedSeasonsMsg := strings.Join(seasonsStrings, ", ")
+
+					//Construct season data formatted string
+					histMsg = fmt.Sprintf("Record: %v-%v (Games: %v-%v)\nSeasons Played: %v\n",
+						mWinsHist, mLossesHist, gWinsHist, gLossesHist,
+						playedSeasonsMsg)
+				}
+
+				//Relock data
+				botData.Mutex.Unlock()
+
+				//Construct embed with player data
+				embed := &discordgo.MessageEmbed{
+					Title:       "PLAYER INFO",
+					Description: fmt.Sprintf("Below is a summary of <@%v>'s player data", player.ID),
+					Fields: []*discordgo.MessageEmbedField{
+						{
+							Name:   "SEASON DATA",
+							Value:  seasonMsg,
+							Inline: true,
+						},
+						{
+							Name:   "HISORICAL DATA",
+							Value:  histMsg,
+							Inline: true,
+						},
+					},
+				}
+
+				//Send ephemeral reply
+				s.InteractionRespond(
+					i.Interaction,
+					&discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Embeds: []*discordgo.MessageEmbed{
+								embed,
+							},
+							Flags: discordgo.MessageFlagsEphemeral,
+						},
+					},
+				)
 
 			case "match-edit": //Allows revision of a match's data using its matchID.
 				//collect options data submitted by command

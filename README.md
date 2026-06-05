@@ -104,10 +104,10 @@ Finished 🟩 | Developed 🟨 | Nonstarted 🟥
 
 ---
 
-#### `/admin player-points` 🟥
+#### `/admin player-points` 🟩
 **Description:**  Manually adjusts league points to a player
 
 ---
 
-#### `/admin player-info` 🟥
+#### `/admin player-info` 🟩
 **Description:**  Replies with a players role, current record, decklist, match history?
