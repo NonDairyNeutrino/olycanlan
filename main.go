@@ -703,6 +703,8 @@ func main() {
 				"loser":  matchResultReport.Loser,
 				"result": matchResultReport.Result,
 				"bounty": matchResultReport.Bounty,
+				"msg_id": "",
+				"status": "active",
 			}
 
 			//increment next_match_id
@@ -769,6 +771,18 @@ func main() {
 						},
 					},
 				)
+				return
+			}
+
+			//Edit bot data again to add msgID
+			botData.Mutex.Lock()
+
+			currentSeasonMatches[newMatchId].(map[string]interface{})["msg_id"] = msg.ID
+
+			err = saveMatches()
+			botData.Mutex.Unlock()
+			if err != nil {
+				log.Printf("Error saving message ID to json: %v", err)
 				return
 			}
 
@@ -1492,9 +1506,11 @@ func main() {
 					archiveRoot := botData.Matches["archive"].(map[string]interface{})
 					archiveMatches := archiveRoot["matches"].(map[string]interface{})
 
-					//move to archive
+					//change status to archived and move to archive
 					for id, match := range currentMatches {
-						archiveMatches[id] = match
+						matchData := match.(map[string]interface{})
+						matchData["status"] = "archived"
+						archiveMatches[id] = matchData
 					}
 
 					//Clean season.json data. Saving current to archive and making fresh season data
@@ -1753,11 +1769,27 @@ func main() {
 					return
 				}
 
+				if matchData["status"] == "voided" {
+					//Match already voided
+					s.InteractionRespond(
+						i.Interaction,
+						&discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Content: fmt.Sprintf("The matchID you submitted has already been voided: `%v`", matchID),
+								Flags:   discordgo.MessageFlagsEphemeral,
+							},
+						},
+					)
+					return
+				}
+
 				//Current match data
 				currentWinner := matchData["winner"].(string)
 				currentLoser := matchData["loser"].(string)
 				currentResult := matchData["result"].(string)
 				currentBounty := matchData["bounty"].(bool)
+				msgID := matchData["msg_id"].(string)
 
 				//Gather input data, using current value if not provided
 				winnerRev := currentWinner
@@ -1801,6 +1833,21 @@ func main() {
 					return
 				}
 
+				//check if winner == loser
+				if winnerRev == loserRev {
+					s.InteractionRespond(
+						i.Interaction,
+						&discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Content: fmt.Sprintf("The winner and loser cannot match. Please resubmit.\nMatch ID: `%v`.", matchID),
+								Flags:   discordgo.MessageFlagsEphemeral,
+							},
+						},
+					)
+					return
+				}
+
 				//if winnerRev == loserRev, either...
 				//new winner = old loser, meaning that new loser = old winner
 				if winnerRev == loserRev && winnerRev == currentLoser {
@@ -1814,18 +1861,55 @@ func main() {
 				//lock bot data
 				botData.Mutex.Lock()
 
-				//reassign values to matchesData
-				matchesData[matchID] = map[string]interface{}{
-					"winner": winnerRev,
-					"loser":  loserRev,
-					"result": resultRev,
-					"bounty": bountyRev,
-				}
+				//reassign values in matchesData
+				matchData["winner"] = winnerRev
+				matchData["loser"] = loserRev
+				matchData["result"] = resultRev
+				matchData["bounty"] = bountyRev
+				matchData["status"] = "edited"
 
 				//Save matches
 				err := saveMatches()
 				botData.Mutex.Unlock()
 				if err != nil {
+					return
+				}
+
+				//edit original message
+				messageLink := fmt.Sprintf(
+					"https://discord.com/channels/%s/%s/%s",
+					i.GuildID,
+					os.Getenv("BOUNTY_CHNL_ID"),
+					msgID,
+				)
+
+				//reconstruct embed
+				embed := &discordgo.MessageEmbed{
+					Title: "Match Result Recorded (⚠️Edited)",
+					Fields: []*discordgo.MessageEmbedField{
+						{
+							Name:   resultRev,
+							Value:  fmt.Sprintf("<@%v> WON vs <@%v>", winnerRev, loserRev),
+							Inline: true,
+						},
+					},
+					Footer: &discordgo.MessageEmbedFooter{
+						Text: fmt.Sprintf("Bounty: %v | MatchID: %v", bountyRev, matchID),
+					},
+					Color: 0xD80621, // Canadian Flag Red 🍁
+				}
+
+				//Edit message
+				_, err_edit := s.ChannelMessageEditComplex(
+					&discordgo.MessageEdit{
+						ID:      msgID,
+						Channel: os.Getenv("BOUNTY_CHNL_ID"),
+						Embeds:  &[]*discordgo.MessageEmbed{embed},
+					},
+				)
+
+				if err_edit != nil {
+					log.Printf("Error editing match message: %v", err_edit)
 					return
 				}
 
@@ -1835,13 +1919,96 @@ func main() {
 					&discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
-							Content: fmt.Sprintf("Match (ID:`%v`) Revised.\nWinner: <@%v> | Loser: <@%v> | Result: %v | Bounty: %v", matchID, winnerRev, loserRev, resultRev, bountyRev),
+							Content: fmt.Sprintf("Match (ID:`%v`) Edited.\nWinner: <@%v> | Loser: <@%v> | Result: %v | Bounty: %v\nOriginal message edited: %s", matchID, winnerRev, loserRev, resultRev, bountyRev, messageLink),
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
 					},
 				)
+
 			case "match-delete":
 				//Removes a match from the matches data using its matchID.
+
+				//collect options data submitted by command
+				subOptions := i.ApplicationCommandData().Options[0].Options
+
+				matchID := subOptions[0].StringValue()
+
+				//Fetch match data
+				matchesData := botData.Matches["current_season"].(map[string]interface{})["matches"].(map[string]interface{})
+				matchData, exists := matchesData[matchID].(map[string]interface{})
+
+				if !exists {
+					//Match does not exist in database
+					s.InteractionRespond(
+						i.Interaction,
+						&discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Content: fmt.Sprintf("The matchID you submitted was not found: `%v`", matchID),
+								Flags:   discordgo.MessageFlagsEphemeral,
+							},
+						},
+					)
+					return
+				}
+
+				//lock bot data
+				botData.Mutex.Lock()
+
+				//change match status to voided
+				matchData["status"] = "voided"
+
+				//Save matches
+				err := saveMatches()
+				botData.Mutex.Unlock()
+				if err != nil {
+					return
+				}
+
+				//Edit original posting
+				msgID := matchData["msg_id"].(string)
+				messageLink := fmt.Sprintf(
+					"https://discord.com/channels/%s/%s/%s",
+					i.GuildID,
+					os.Getenv("BOUNTY_CHNL_ID"),
+					msgID,
+				)
+
+				//Construct new embed
+				embed := &discordgo.MessageEmbed{
+					Title:       "⛔ Match Voided ⛔",
+					Description: "This match has been removed",
+					Color:       0xD80621, // Canadian Flag Red 🍁,
+					Footer: &discordgo.MessageEmbedFooter{
+						Text: fmt.Sprintf("MatchID: %v", matchID),
+					},
+				}
+
+				//Edit message
+				_, err_edit := s.ChannelMessageEditComplex(
+					&discordgo.MessageEdit{
+						ID:      msgID,
+						Channel: os.Getenv("BOUNTY_CHNL_ID"),
+						Embeds:  &[]*discordgo.MessageEmbed{embed},
+					},
+				)
+
+				if err_edit != nil {
+					log.Printf("Error editing match message: %v", err_edit)
+					return
+				}
+
+				//Reply with ephemeral msg
+				s.InteractionRespond(
+					i.Interaction,
+					&discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: fmt.Sprintf("Match `%v` has been voided\nOriginal Post Edited:%s", matchID, messageLink),
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					},
+				)
 			}
 		}
 	})

@@ -85,12 +85,12 @@ Finished 🟩 | Developed 🟨 | Nonstarted 🟥
 ---
 
 #### `/admin match-edit` 🟩
-**Description:**  Allows revision of a match's data using its matchID. Potential to edit original message (NEED TO ADD MSGID to /RESULT)
+**Description:**  Allows revision of a match's data using its matchID. Potential to edit original message (NEED TO ADD MSGID to /RESULT). Changes status to "edited"
 
 ---
 
-#### `/admin match-delete` 🟥
-**Description:**  Removes a match from the matches data using its matchID.
+#### `/admin match-delete` 🟩
+**Description:**  Removes a match from the matches data using its matchID. Changes status to "voided"
 
 ---
 
