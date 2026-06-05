@@ -94,12 +94,12 @@ Finished 🟩 | Developed 🟨 | Nonstarted 🟥
 
 ---
 
-#### `/admin player-signup` 🟥
+#### `/admin player-signup` 🟩
 **Description:**  Admin verion of the signup command. Allows selection of battler/jammer
 
 ---
 
-#### `/admin player-drop` 🟥
+#### `/admin player-drop` 🟩
 **Description:**  Drops a player from the current league season
 
 ---

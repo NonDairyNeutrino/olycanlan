@@ -413,12 +413,12 @@ var commands = []*discordgo.ApplicationCommand{
 						Required:    true,
 						Choices: []*discordgo.ApplicationCommandOptionChoice{
 							{
-								Name:  "battler",
-								Value: "Battler ⚔️",
+								Name:  "Battler ⚔️",
+								Value: "battler",
 							},
 							{
-								Name:  "jammer",
-								Value: "Jammer 👊",
+								Name:  "Jammer 👊",
+								Value: "jammer",
 							},
 						},
 					},
@@ -455,18 +455,24 @@ var commands = []*discordgo.ApplicationCommand{
 						Required:    true,
 						Choices: []*discordgo.ApplicationCommandOptionChoice{
 							{
-								Name:  "add",
-								Value: "Add",
+								Name:  "Add",
+								Value: "add",
 							},
 							{
-								Name:  "subtract",
-								Value: "Subtract",
+								Name:  "Subtract",
+								Value: "subtract",
 							},
 							{
-								Name:  "set",
-								Value: "Set",
+								Name:  "Set",
+								Value: "set",
 							},
 						},
+					},
+					{
+						Type:        discordgo.ApplicationCommandOptionInteger,
+						Name:        "points",
+						Description: "Points",
+						Required:    true,
 					},
 				},
 			},
@@ -1711,7 +1717,7 @@ func main() {
 			case "reminder":
 				//Posts reminder for unreported matchest in weekly-matches
 			}
-		case "admin":
+		case "admin": // Admin commands. Edit player data and match data
 			sub := i.ApplicationCommandData().Options[0].Name
 
 			//role check here for ADMINS only
@@ -1734,17 +1740,381 @@ func main() {
 			}
 
 			switch sub {
-			case "player-signup":
-				//Admin version of signup for selected player
-			case "player-drop":
-				//Admin version of drop for selected player
-			case "player-points":
-				//Manually modifies points of a specified player
-			case "player-info":
-				//Generates player info for a specified player
-			case "match-edit":
-				//Allows revision of a match's data using its matchID.
+			case "player-signup": //Admin version of signup for selected player
 
+				//Gather info submitted in command
+				subOptions := i.ApplicationCommandData().Options[0].Options
+
+				//Player
+				player := subOptions[0].UserValue(s)
+
+				//Role
+				role := subOptions[1].StringValue()
+
+				switch role {
+				case "battler":
+
+					//Read metadata for if league signups are open
+					signupStatus := botData.Metadata["current_season"].(map[string]interface{})["signups"].(bool)
+
+					//if signupStatus is false, let the user know and return
+					if !signupStatus {
+						s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Content: "Signups are currently closed for this season. Please use `/league open-signups` to open signups and then resubmit.",
+								Flags:   discordgo.MessageFlagsEphemeral,
+							},
+						})
+						return
+					}
+
+					//upkeep initialization
+					guildMember, _ := s.GuildMember(i.GuildID, player.ID)
+
+					//check current roles. If already a battler, let them know they are signed up. If they are a jammer, remove the jammer role
+					for _, r := range guildMember.Roles {
+						if r == os.Getenv("BATTLER_ID") {
+							//Already signed up!
+							s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+								Type: discordgo.InteractionResponseChannelMessageWithSource,
+								Data: &discordgo.InteractionResponseData{
+									Content: fmt.Sprintf("<@%v> is already signed up as a Battler ⚔️ for this season.", player.ID),
+									Flags:   discordgo.MessageFlagsEphemeral,
+								},
+							})
+							return
+						}
+						if r == os.Getenv("JAMMER_ID") {
+							s.GuildMemberRoleRemove(i.GuildID, player.ID, os.Getenv("JAMMER_ID"))
+						}
+					}
+
+					//Revise the player's data in season.json
+					//lock the data and unlock once returned/finished
+					botData.Mutex.Lock()
+
+					seasonPlayers := botData.Season["season_players"].(map[string]interface{})
+
+					//Logic check if player already in season data
+					existingSeasonPlayer, exists := seasonPlayers[player.ID]
+
+					if exists {
+
+						//Player already exists -> update their role
+						playerData := existingSeasonPlayer.(map[string]interface{})
+						playerData["role"] = "battler"
+						playerData["active"] = true
+						playerData["dropped"] = false
+						playerData["decklist"].(map[string]interface{})["url"] = "Not Submitted"
+
+					} else {
+
+						//New player to season -> create fresh entry
+						seasonPlayers[player.ID] = map[string]interface{}{
+							"active": true,
+							"decklist": map[string]interface{}{
+								"url":      "Not Submitted",
+								"name":     "",
+								"approved": false,
+							},
+							"dropped":      false,
+							"opponents":    []interface{}{},
+							"received_bye": false,
+							"role":         "battler",
+							"standings": map[string]interface{}{
+								"points":      0,
+								"wins":        0,
+								"losses":      0,
+								"game_wins":   0,
+								"game_losses": 0,
+							},
+						}
+
+					}
+
+					//Revise the player's data in players.json
+					playersHistory := botData.Players["players"].(map[string]interface{})
+
+					//Set player nickname
+					nickname := guildMember.Nick
+					if nickname == "" {
+						nickname = guildMember.User.Username
+					}
+
+					//Logic check if player exists in players.json
+					existingHistoricalPlayer, exists := playersHistory[player.ID]
+
+					if exists {
+
+						//Player already exists -> update their discord nickname or username
+						playerData := existingHistoricalPlayer.(map[string]interface{})
+						playerData["discord_nickname"] = nickname
+
+					} else {
+
+						//New player to league overall -> create fresh entry
+						playersHistory[player.ID] = map[string]interface{}{
+							"discord_nickname": nickname,
+							"historical_record": map[string]interface{}{
+								"game_losses": 0,
+								"game_wins":   0,
+								"losses":      0,
+								"wins":        0,
+							},
+							"last_decklist": map[string]interface{}{
+								"name": "",
+								"url":  "",
+							},
+							"seasons_played": []interface{}{},
+						}
+
+					}
+
+					//save the season and players jsons
+					err_season := saveSeason()
+					err_players := savePlayers()
+					//unlock botdata
+					botData.Mutex.Unlock()
+
+					//Print errors if any (AFTER UNLOCKING)
+					if err_season != nil {
+						return
+					}
+					if err_players != nil {
+						return
+					}
+
+					//Add battler role
+					s.GuildMemberRoleAdd(i.GuildID, player.ID, os.Getenv("BATTLER_ID"))
+
+					//Respond with an ephemeral message
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: fmt.Sprintf("<@%v> has been signed up as a Battler ⚔️ for this season!\n**Please direct them to use the `/signup decklist` command to provide their decklist before the season starts.**", player.ID),
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+
+				case "jammer":
+
+					//upkeep initialization
+					guildMember, _ := s.GuildMember(i.GuildID, player.ID)
+
+					//check current roles. If already a jammer, let them know they are signed up. If they are a battler, remove the battler role
+
+					for _, r := range guildMember.Roles {
+						if r == os.Getenv("JAMMER_ID") {
+							//Already signed up!
+							s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+								Type: discordgo.InteractionResponseChannelMessageWithSource,
+								Data: &discordgo.InteractionResponseData{
+									Content: fmt.Sprintf("<@%v> is already signed up as a Jammer 👊 for this season.", player.ID),
+									Flags:   discordgo.MessageFlagsEphemeral,
+								},
+							})
+							return
+						}
+						if r == os.Getenv("BATTLER_ID") {
+							s.GuildMemberRoleRemove(i.GuildID, player.ID, os.Getenv("BATTLER_ID"))
+						}
+					}
+
+					//Revise the player's data in season.json
+					//lock the data and unlock once returned/finished
+					botData.Mutex.Lock()
+
+					seasonPlayers := botData.Season["season_players"].(map[string]interface{})
+
+					//Logic check if player already in season data
+					existingPlayer, exists := seasonPlayers[player.ID]
+
+					if exists {
+
+						//Player already exists -> update their role
+						playerData := existingPlayer.(map[string]interface{})
+						playerData["role"] = "jammer"
+						playerData["active"] = true
+						playerData["dropped"] = false
+
+					} else {
+
+						//New player to season -> create fresh entry
+						seasonPlayers[player.ID] = map[string]interface{}{
+							"active": true,
+							"decklist": map[string]interface{}{
+								"url":      "Not Submitted",
+								"name":     "",
+								"approved": false,
+							},
+							"dropped":      false,
+							"opponents":    []interface{}{},
+							"received_bye": false,
+							"role":         "jammer",
+							"standings": map[string]interface{}{
+								"points":      0,
+								"wins":        0,
+								"losses":      0,
+								"game_wins":   0,
+								"game_losses": 0,
+							},
+						}
+
+					}
+
+					//Revise the player's data in players.json
+					playersHistory := botData.Players["players"].(map[string]interface{})
+
+					//Set player nickname
+					nickname := guildMember.Nick
+					if nickname == "" {
+						nickname = guildMember.User.Username
+					}
+
+					//Logic check if player exists in players.json
+					existingHistoricalPlayer, exists := playersHistory[player.ID]
+
+					if exists {
+
+						//Player already exists -> update their discord nickname or username
+						playerData := existingHistoricalPlayer.(map[string]interface{})
+						playerData["discord_nickname"] = nickname
+
+					} else {
+
+						//New player to league overall -> create fresh entry
+						playersHistory[player.ID] = map[string]interface{}{
+							"discord_nickname": nickname,
+							"historical_record": map[string]interface{}{
+								"game_losses": 0,
+								"game_wins":   0,
+								"losses":      0,
+								"wins":        0,
+							},
+							"last_decklist": map[string]interface{}{
+								"name": "",
+								"url":  "",
+							},
+							"seasons_played": []interface{}{},
+						}
+
+					}
+
+					//save the season and players jsons
+					err_season := saveSeason()
+					err_players := savePlayers()
+					//unlock botdata
+					botData.Mutex.Unlock()
+
+					//Print errors if any (AFTER UNLOCKING)
+					if err_season != nil {
+						return
+					}
+					if err_players != nil {
+						return
+					}
+
+					//Add jammer role
+					s.GuildMemberRoleAdd(i.GuildID, player.ID, os.Getenv("JAMMER_ID"))
+
+					//Respond with an ephemeral message
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: fmt.Sprintf("<@%v> has been signed up as a Jammer 👊 for this season!", player.ID),
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+				}
+
+			case "player-drop": //Admin version of drop for selected player
+
+				//Gather info submitted in command
+				subOptions := i.ApplicationCommandData().Options[0].Options
+
+				//Player
+				player := subOptions[0].UserValue(s)
+
+				//upkeep initializations
+				guildMember, _ := s.GuildMember(i.GuildID, player.ID)
+
+				//check if user is currently signed up
+				allowedRoles := []string{
+					os.Getenv("BATTLER_ID"),
+					os.Getenv("JAMMER_ID"),
+				}
+
+				// if they dont have the role, reply and return
+				if !memberHasRole(guildMember, allowedRoles) {
+					s.InteractionRespond(
+						i.Interaction,
+						&discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Content: fmt.Sprintf("<@%v> is already not an active participant in the current season. Carry on 🍁", player.ID),
+								Flags:   discordgo.MessageFlagsEphemeral,
+							},
+						},
+					)
+					return
+				}
+
+				for _, r := range guildMember.Roles {
+					roleName := ""
+
+					if r == os.Getenv("BATTLER_ID") {
+						roleName = "Battler ⚔️"
+					}
+
+					if r == os.Getenv("JAMMER_ID") {
+						roleName = "Jammer 👊"
+					}
+
+					//If roleName has not been updated (Not battler or jammer), skip
+					if roleName == "" {
+						continue
+					}
+
+					//Remove the current role and add the Past League Player role
+					s.GuildMemberRoleRemove(i.GuildID, player.ID, r)
+					s.GuildMemberRoleAdd(i.GuildID, player.ID, os.Getenv("INACTIVE_ID"))
+
+					//Revise the player's data in season.json
+					//lock the data and unlock once returned/finished
+					botData.Mutex.Lock()
+					defer botData.Mutex.Unlock()
+					//change dropped to true and active to false
+					playerData := botData.Season["season_players"].(map[string]interface{})[player.ID].(map[string]interface{})
+					playerData["dropped"] = true
+					playerData["active"] = false
+					//save the season
+					err := saveSeason()
+					if err != nil {
+						return
+					}
+
+					//Tell the player they have been dropped
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: fmt.Sprintf("<@%v> has been dropped as a %v for the current season.", player.ID, roleName),
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					//Make drop announcement in organizer channel
+					s.ChannelMessageSend(
+						os.Getenv("ADMIN_CHNL_ID"),
+						fmt.Sprintf("<@&%v>\n<@%v> has been admin-dropped as a %v for the current season.", os.Getenv("ORGANIZER_ID"), player.ID, roleName),
+					)
+
+					return
+				}
+			case "player-points": //Manually modifies points of a specified player
+
+			case "player-info": //Generates player info for a specified player
+
+			case "match-edit": //Allows revision of a match's data using its matchID.
 				//collect options data submitted by command
 				subOptions := i.ApplicationCommandData().Options[0].Options
 
@@ -1925,9 +2295,7 @@ func main() {
 					},
 				)
 
-			case "match-delete":
-				//Removes a match from the matches data using its matchID.
-
+			case "match-delete": //Removes a match from the matches data using its matchID.
 				//collect options data submitted by command
 				subOptions := i.ApplicationCommandData().Options[0].Options
 
