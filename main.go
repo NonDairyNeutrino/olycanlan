@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand/v2"
 	neturl "net/url"
 	"os"
 	"os/signal"
+	"sort"
 	"strings"
 	"sync"
 	"syscall"
@@ -222,11 +224,18 @@ type MatchResult struct { // this structure with capital letters apparently help
 	Bounty bool   `json:"bounty"`
 }
 
-type League_Player struct {
-	discord_userid string
-	discord_name   string
-	player_type    string
-	decklist       string
+type RoundPlayer struct {
+	ID          string
+	Wins        int
+	Pairings    []string
+	ReceivedBye bool
+}
+
+type RoundPairing struct {
+	Table   int    `json:"table"`
+	Player1 string `json:"player1"`
+	Player2 string `json:"player2"`
+	Bye     bool   `json:"bye"`
 }
 
 const prefix string = "!skbot"
@@ -1704,6 +1713,140 @@ func main() {
 			switch sub {
 			case "new":
 				//Generate pairings using current standings. Assign matchups. Assign byes. Constructs round structure to seasons.json
+
+				//Initialize a roundplayers list of RoundPlayer structs
+				var roundPlayers []RoundPlayer
+
+				//Read in the active season players and their current tournament wins
+				seasonPlayers := botData.Season["season_players"].(map[string]interface{})
+
+				for playerID, player := range seasonPlayers { // for loop across season players
+					playerData := player.(map[string]interface{})
+
+					active := playerData["active"].(bool)
+
+					if !active { // if active == FALSE skip player
+						continue
+					}
+
+					//Parse previous pairings into a string list
+					pairingsRaw := playerData["pairings"].([]interface{})
+					pairings := make([]string, 0, len(pairingsRaw))
+					for _, opp := range pairingsRaw {
+						pairings = append(pairings, opp.(string))
+					}
+
+					//Add player to roundPlayers list
+					roundPlayers = append(roundPlayers, RoundPlayer{
+						ID:          playerID,
+						Wins:        int(playerData["standings"].(map[string]interface{})["wins"].(float64)),
+						Pairings:    pairings,
+						ReceivedBye: playerData["received_bye"].(bool),
+					})
+				}
+
+				//Sort roundPlayers by wins
+				sort.Slice(roundPlayers, func(i, j int) bool {
+					return roundPlayers[i].Wins > roundPlayers[j].Wins
+				})
+
+				valid := false
+				tries := 0
+
+			CreatePairings:
+				for !valid {
+					if valid {
+						break CreatePairings
+					}
+					if tries == 10 {
+						break CreatePairings
+					}
+
+					//Randomize each bracket of wins before assigning pairings
+					for start := 0; start < len(roundPlayers); {
+						end := start + 1
+
+						//Increment end if still in matching win bracket
+						for end < len(roundPlayers) && roundPlayers[end].Wins == roundPlayers[start].Wins {
+							end++
+						}
+
+						//Once we have a slice with matching wins, shuffle them
+						rand.Shuffle(end-start, func(i, j int) {
+							roundPlayers[start+i], roundPlayers[start+j] =
+								roundPlayers[start+j], roundPlayers[start+i]
+						})
+
+						start = end //start the next win bracket where the last left off
+					}
+
+					//Assign pairings
+					var roundPairings []RoundPairing
+
+					table := 1
+					for i := 0; i < len(roundPlayers); i += 2 {
+
+						pairing := RoundPairing{
+							Table:   table,
+							Player1: roundPlayers[i].ID,
+						}
+
+						if i+1 < len(roundPlayers) {
+							pairing.Player2 = roundPlayers[i+1].ID
+							pairing.Bye = false
+						} else {
+							pairing.Player2 = ""
+							pairing.Bye = true
+						}
+
+						roundPairings = append(roundPairings, pairing)
+
+						table++
+					}
+
+					//Check if its valid
+					valid = true
+					for _, table := range roundPairings {
+						if !valid {
+							break
+						} // break if invalid table was already found
+
+						p1Id := table.Player1
+						p2Id := table.Player2
+
+						//Get player 1's round data
+						var p1ReceivedBye bool
+						var p1Pairings []string
+
+						for _, p := range roundPlayers {
+							if p.ID == p1Id {
+								p1Pairings = p.Pairings
+								p1ReceivedBye = p.ReceivedBye
+							}
+						}
+
+						if table.Bye { //table bye -> check if player1 previously had the bye
+							if p1ReceivedBye {
+								valid = false
+							}
+						} else {
+							//get player 1's previous pairings
+							for _, pairID := range p1Pairings {
+								if pairID == p2Id {
+									valid = false
+								}
+							}
+						}
+					}
+					tries++
+				}
+
+				if !valid {
+					//Unable to generate pairings after 10 tries.... notify admin
+				}
+
+				//Valid pairing found. Proceed with posting/notifying admin
+
 			case "post":
 				//Post in weekly-matches the current round structure
 			case "close":

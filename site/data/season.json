@@ -1,5 +1,12 @@
 {
     "rounds": {
+        "pending": {
+            "pairings": [
+                {
+                }
+            ],
+            "status": "pending"
+        },
         "1": {
             "pairings": [
                 {
