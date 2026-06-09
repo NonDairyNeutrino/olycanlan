@@ -232,10 +232,14 @@ type RoundPlayer struct {
 }
 
 type RoundPairing struct {
-	Table   int    `json:"table"`
-	Player1 string `json:"player1"`
-	Player2 string `json:"player2"`
-	Bye     bool   `json:"bye"`
+	Table    int    `json:"table"`
+	Player1  string `json:"player1"`
+	Player2  string `json:"player2"`
+	Bye      bool   `json:"bye"`
+	Reported bool   `json:"reported"`
+	MatchID  string `json:"match_id"`
+	Result   string `json:"result"`
+	Winner   string `json:"winner"`
 }
 
 const prefix string = "!skbot"
@@ -570,7 +574,7 @@ func registerCommands(s *discordgo.Session) {
 
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatalln("Error loading enironment variables:", err)
+		log.Fatalln("Error loading environment variables:", err)
 	}
 
 	for _, cmd := range commands {
@@ -626,7 +630,7 @@ func main() {
 	}
 
 	//---------------------------------------------------------------------//
-	//SLASH COMMAND TESTING GROUNDS
+	//SLASH COMMAND DEVELOPMENT
 
 	//Slash command handler.
 	discord.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -1262,7 +1266,6 @@ func main() {
 				return
 			}
 		case "drop":
-
 			//check if user is currently signed up
 			allowedRoles := []string{
 				os.Getenv("BATTLER_ID"),
@@ -1716,6 +1719,10 @@ func main() {
 
 				//Initialize a roundplayers list of RoundPlayer structs
 				var roundPlayers []RoundPlayer
+				playerMap := make(map[string]RoundPlayer)
+
+				//Lock bot data
+				botData.Mutex.Lock()
 
 				//Read in the active season players and their current tournament wins
 				seasonPlayers := botData.Season["season_players"].(map[string]interface{})
@@ -1750,14 +1757,21 @@ func main() {
 					return roundPlayers[i].Wins > roundPlayers[j].Wins
 				})
 
+				//Populate the playerMap of roundPlayers for quick lookup
+				for _, p := range roundPlayers {
+					playerMap[p.ID] = p
+				}
+
+				//Create the set of pairings
+				var roundPairings []RoundPairing
 				valid := false
 				tries := 0
 
 			CreatePairings:
 				for !valid {
-					if valid {
-						break CreatePairings
-					}
+					valid = true
+					tries++
+					//If at 10 tries, just kick out and notify admin (see below)
 					if tries == 10 {
 						break CreatePairings
 					}
@@ -1780,12 +1794,11 @@ func main() {
 						start = end //start the next win bracket where the last left off
 					}
 
-					//Assign pairings
-					var roundPairings []RoundPairing
-
+					//Assign pairings by table
 					table := 1
 					for i := 0; i < len(roundPlayers); i += 2 {
 
+						//Iterated table number and player
 						pairing := RoundPairing{
 							Table:   table,
 							Player1: roundPlayers[i].ID,
@@ -1799,17 +1812,19 @@ func main() {
 							pairing.Bye = true
 						}
 
+						//Create standard everything else
+						pairing.Reported = false
+						pairing.MatchID = ""
+						pairing.Result = ""
+						pairing.Winner = ""
+
 						roundPairings = append(roundPairings, pairing)
 
 						table++
 					}
 
 					//Check if its valid
-					valid = true
 					for _, table := range roundPairings {
-						if !valid {
-							break
-						} // break if invalid table was already found
 
 						p1Id := table.Player1
 						p2Id := table.Player2
@@ -1828,24 +1843,56 @@ func main() {
 						if table.Bye { //table bye -> check if player1 previously had the bye
 							if p1ReceivedBye {
 								valid = false
+								break
 							}
 						} else {
 							//get player 1's previous pairings
 							for _, pairID := range p1Pairings {
 								if pairID == p2Id {
 									valid = false
+									break
 								}
 							}
 						}
 					}
-					tries++
 				}
 
 				if !valid {
 					//Unable to generate pairings after 10 tries.... notify admin
+					s.InteractionRespond(
+						i.Interaction,
+						&discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Content: "Round pairing generation failed after 10 attempts.\nPlease contact the bot manager and review the seasonal player data.",
+								Flags:   discordgo.MessageFlagsEphemeral,
+							},
+						},
+					)
+					botData.Mutex.Unlock()
+					return
 				}
 
 				//Valid pairing found. Proceed with posting/notifying admin
+
+				//Save as "pending" round for review
+
+				roundsData := botData.Season["rounds"].(map[string]interface{}) // Pull rounds data
+
+				roundsData["pending"].(map[string]interface{})["pairings"] = roundPairings // apply pairings to "pending"
+				roundsData["pending"].(map[string]interface{})["status"] = "pending"       // set status to "pending"
+
+				err_save := saveSeason()
+				botData.Mutex.Unlock()
+				if err_save != nil {
+					log.Printf("Error saving pairing to json: %v", err_save)
+					return
+				}
+
+				//Reply to admin with pairings & data
+
+				//Construct embed
+				//var fields []*discordgo.MessageEmbedField
 
 			case "post":
 				//Post in weekly-matches the current round structure
@@ -2440,12 +2487,12 @@ func main() {
 						{
 							Name:   "SEASON DATA",
 							Value:  seasonMsg,
-							Inline: true,
+							Inline: false,
 						},
 						{
 							Name:   "HISORICAL DATA",
 							Value:  histMsg,
-							Inline: true,
+							Inline: false,
 						},
 					},
 				}

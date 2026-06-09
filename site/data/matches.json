@@ -4,18 +4,18 @@
             "S06-001": {
                 "bounty": true,
                 "loser": "222215591765868544",
-                "result": "3-0",
-                "winner": "162114243557195776",
                 "msg_id": "1234",
-                "status": "archived"
+                "result": "3-0",
+                "status": "archived",
+                "winner": "162114243557195776"
             },
             "S06-002": {
                 "bounty": true,
                 "loser": "1504687575229665401",
-                "result": "2-1",
-                "winner": "222215591765868544",
                 "msg_id": "1234",
-                "status": "active"                
+                "result": "2-1",
+                "status": "active",
+                "winner": "222215591765868544"
             }
         }
     },
@@ -24,17 +24,25 @@
             "S08-001": {
                 "bounty": true,
                 "loser": "1504687575229665401",
-                "result": "3-0",
-                "winner": "1504687575229665401",
                 "msg_id": "1234",
-                "status": "active"
+                "result": "3-0",
+                "status": "active",
+                "winner": "1504687575229665401"
+            },
+            "S08-002": {
+                "bounty": true,
+                "loser": "222215591765868544",
+                "msg_id": "1513989490010619978",
+                "result": "3-0",
+                "status": "voided",
+                "winner": "1504687575229665401"
             }
         },
         "metadata": {
-            "next_match_id": 2
+            "next_match_id": 3
         }
     },
     "metadata": {
-        "last_updated": "2026-06-01T08:01:45Z"
+        "last_updated": "2026-06-09T20:22:59Z"
     }
 }

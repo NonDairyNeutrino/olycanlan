@@ -1,12 +1,5 @@
 {
     "rounds": {
-        "pending": {
-            "pairings": [
-                {
-                }
-            ],
-            "status": "pending"
-        },
         "1": {
             "pairings": [
                 {
@@ -41,6 +34,12 @@
                 }
             ],
             "status": "completed"
+        },
+        "pending": {
+            "pairings": [
+                {}
+            ],
+            "status": "pending"
         }
     },
     "season_players": {
@@ -52,13 +51,13 @@
                 "url": "https://moxfield.com/decks/fa-TvMUddkq1xihS_nUViA"
             },
             "dropped": false,
-            "pairings": [
-                "222215591765868544"
-            ],
             "opponents": [
                 "222215591765868544",
                 "333333333333333333",
                 "444444444444444444"
+            ],
+            "pairings": [
+                "222215591765868544"
             ],
             "received_bye": false,
             "role": "battler",
@@ -74,12 +73,12 @@
             "active": true,
             "decklist": {
                 "approved": true,
-                "name": "Discard Moon 2.0",
-                "url": "https://moxfield.com/decks/fa-TvMUddkq1xihS_nUViA"
+                "name": "Test Deck",
+                "url": "https://moxfield.com/decks/GMKkqs9_C0-sucvY3ax7_w"
             },
             "dropped": false,
-            "pairings": [],
             "opponents": [],
+            "pairings": [],
             "received_bye": false,
             "role": "battler",
             "standings": {
