@@ -14,10 +14,10 @@ Finished 🟩 | Developed 🟨 | Nonstarted 🟥
 ### **PLAYER COMMANDS**
 
 
-#### `/result` 🟩
+#### `/result` 🟨
 
 **Required Roles:** Battler & Jammer  
-**Description:**  Records a completed match result. Collects winner, loser, record, type (bounty/non-bounty) and generates a matchID. Adds match to matches data.
+**Description:**  Records a completed match result. Collects winner, loser, record, type (bounty/non-bounty) and generates a matchID. Adds match to matches data. NEEDS to write some data to pairings (reported, matchID, winner, etc)
 
 ---
 
