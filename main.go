@@ -18,22 +18,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Match Recording
-// input: channel
-// output: table of current scores
-// 1. Scan channel for posts since last scan
-// 2. For each post
-//   2.1 test post is a "report post"
-// 2. For each report post
-//   2.1 Extract players
-//   2.2 Extract scores
-//   2.3 Extract match type e.g. bounty, non-bounty first, non-bounty repeated
-//   2.4 Return "Report" with above info
-// 3. For each player
-//   3.1 Calculate new points for player based on Reports
-// 4. Update Discord scoreboard post with new and total points
-// 5. Update website scoreboard with new and total points
-
 // Bot Data Structures & Functions. To store in memory rather than read/write json continually.
 type BotData struct {
 	Metadata map[string]interface{}
@@ -227,6 +211,7 @@ type MatchResult struct { // this structure with capital letters apparently help
 type RoundPlayer struct {
 	ID          string
 	Wins        int
+	Losses      int
 	Pairings    []string
 	ReceivedBye bool
 }
@@ -1715,6 +1700,11 @@ func main() {
 
 			switch sub {
 			case "new":
+
+				//TODO
+				// - check if current round status is "completed" (season data)
+				// - check if next round > total rounds (metdata)
+
 				//Generate pairings using current standings. Assign matchups. Assign byes. Constructs round structure to seasons.json
 
 				//Initialize a roundplayers list of RoundPlayer structs
@@ -1747,10 +1737,14 @@ func main() {
 					roundPlayers = append(roundPlayers, RoundPlayer{
 						ID:          playerID,
 						Wins:        int(playerData["standings"].(map[string]interface{})["wins"].(float64)),
+						Losses:      int(playerData["standings"].(map[string]interface{})["losses"].(float64)),
 						Pairings:    pairings,
 						ReceivedBye: playerData["received_bye"].(bool),
 					})
 				}
+
+				//Log print check
+				log.Printf("Active Players Found: %d", len(roundPlayers))
 
 				//Sort roundPlayers by wins
 				sort.Slice(roundPlayers, func(i, j int) bool {
@@ -1769,10 +1763,14 @@ func main() {
 
 			CreatePairings:
 				for !valid {
+					//Reset pairings
+					roundPairings = nil
 					valid = true
 					tries++
+					log.Printf("Pairing attempt %d started", tries)
 					//If at 10 tries, just kick out and notify admin (see below)
-					if tries == 10 {
+					if tries > 50 {
+						valid = false
 						break CreatePairings
 					}
 
@@ -1824,39 +1822,35 @@ func main() {
 					}
 
 					//Check if its valid
+				CheckPairings:
 					for _, table := range roundPairings {
 
 						p1Id := table.Player1
 						p2Id := table.Player2
 
 						//Get player 1's round data
-						var p1ReceivedBye bool
-						var p1Pairings []string
-
-						for _, p := range roundPlayers {
-							if p.ID == p1Id {
-								p1Pairings = p.Pairings
-								p1ReceivedBye = p.ReceivedBye
-							}
-						}
+						p1 := playerMap[p1Id]
 
 						if table.Bye { //table bye -> check if player1 previously had the bye
-							if p1ReceivedBye {
+							if p1.ReceivedBye {
 								valid = false
-								break
+								log.Printf("Pairing attempt %d failed: Bad BYE", tries)
+								break CheckPairings
 							}
 						} else {
 							//get player 1's previous pairings
-							for _, pairID := range p1Pairings {
+							for _, pairID := range p1.Pairings {
 								if pairID == p2Id {
 									valid = false
-									break
+									log.Printf("Pairing attempt %d failed: Already matched, p1: %v, p2: %v", tries, p1Id, p2Id)
+									break CheckPairings
 								}
 							}
 						}
 					}
 				}
 
+				log.Printf("Validity: %v", valid)
 				if !valid {
 					//Unable to generate pairings after 10 tries.... notify admin
 					s.InteractionRespond(
@@ -1864,7 +1858,7 @@ func main() {
 						&discordgo.InteractionResponse{
 							Type: discordgo.InteractionResponseChannelMessageWithSource,
 							Data: &discordgo.InteractionResponseData{
-								Content: "Round pairing generation failed after 10 attempts.\nPlease contact the bot manager and review the seasonal player data.",
+								Content: "Round pairing generation failed after 50 attempts.\n\nPlease contact the bot manager and review the seasonal player data.",
 								Flags:   discordgo.MessageFlagsEphemeral,
 							},
 						},
@@ -1880,7 +1874,6 @@ func main() {
 				roundsData := botData.Season["rounds"].(map[string]interface{}) // Pull rounds data
 
 				roundsData["pending"].(map[string]interface{})["pairings"] = roundPairings // apply pairings to "pending"
-				roundsData["pending"].(map[string]interface{})["status"] = "pending"       // set status to "pending"
 
 				err_save := saveSeason()
 				botData.Mutex.Unlock()
@@ -1892,10 +1885,169 @@ func main() {
 				//Reply to admin with pairings & data
 
 				//Construct embed
-				//var fields []*discordgo.MessageEmbedField
+				//Create "fields" for each pairing
+				var fields []*discordgo.MessageEmbedField
+				for _, pairing := range roundPairings {
+					var value string
+
+					if pairing.Bye {
+						value = fmt.Sprintf("BYE: <@%s> (%v-%v)", pairing.Player1, playerMap[pairing.Player1].Wins, playerMap[pairing.Player1].Losses)
+					} else {
+						value = fmt.Sprintf("<@%s> (%v-%v) vs <@%s> (%v-%v)",
+							pairing.Player1, playerMap[pairing.Player1].Wins, playerMap[pairing.Player1].Losses,
+							pairing.Player2, playerMap[pairing.Player2].Wins, playerMap[pairing.Player2].Losses)
+					}
+
+					fields = append(fields, &discordgo.MessageEmbedField{
+						Name:   fmt.Sprintf("Match %d", pairing.Table),
+						Value:  value,
+						Inline: false,
+					})
+				}
+
+				//build embed
+				embed := &discordgo.MessageEmbed{
+					Title:  "Round Pairings",
+					Fields: fields,
+				}
+
+				//send ephemeral reply
+				s.InteractionRespond(
+					i.Interaction,
+					&discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: "Please review these round pairings and use `/round post` to post the round announcement",
+							Embeds: []*discordgo.MessageEmbed{
+								embed,
+							},
+							Flags: discordgo.MessageFlagsEphemeral,
+						},
+					},
+				)
 
 			case "post":
 				//Post in weekly-matches the current round structure
+
+				//retrieve the "pending" round
+				botData.Mutex.Lock()
+
+				roundsData := botData.Season["rounds"].(map[string]interface{}) // Pull rounds data
+				pendingRound, ok := roundsData["pending"].(map[string]interface{})
+
+				playerData := botData.Season["season_players"].(map[string]interface{}) // Pull player data
+
+				if !ok || pendingRound == nil { // if no pending round found, kick back at command user
+					s.InteractionRespond(
+						i.Interaction,
+						&discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Content: "No pending round found to post. Use `/round new` to generate a new league round first.",
+								Flags:   discordgo.MessageFlagsEphemeral,
+							},
+						},
+					)
+					botData.Mutex.Unlock()
+					return
+				}
+
+				//Get next round value and iterate current_round metadata
+				seasonMeta := botData.Metadata["current_season"].(map[string]interface{})
+				currentRound := int(seasonMeta["current_round"].(float64))
+				currentRound++
+				seasonMeta["current_round"] = float64(currentRound)
+
+				//Move pending round over to the next numbered round
+				currentRoundStr := fmt.Sprintf("%d", currentRound)
+				roundsData[currentRoundStr] = pendingRound
+				roundsData[currentRoundStr].(map[string]interface{})["status"] = "active"
+
+				//Construct embed for posting
+				newPairings := pendingRound["pairings"].([]interface{})
+
+				var fields []*discordgo.MessageEmbedField
+				for _, pairing := range newPairings {
+					var value string
+					p := pairing.(map[string]interface{})
+					p1 := p["player1"].(string)
+					p1W := playerData[p1].(map[string]interface{})["standings"].(map[string]interface{})["wins"].(float64)
+					p1L := playerData[p1].(map[string]interface{})["standings"].(map[string]interface{})["losses"].(float64)
+					bye := p["bye"].(bool)
+					table := p["table"].(float64)
+
+					if bye {
+						value = fmt.Sprintf("BYE: <@%s> (%d-%d)", p1, int(p1W), int(p1L))
+					} else {
+						p2 := p["player2"].(string)
+						p2W := playerData[p2].(map[string]interface{})["standings"].(map[string]interface{})["wins"].(float64)
+						p2L := playerData[p2].(map[string]interface{})["standings"].(map[string]interface{})["losses"].(float64)
+
+						value = fmt.Sprintf("<@%s> (%d-%d) vs <@%s> (%d-%d)",
+							p1, int(p1W), int(p1L),
+							p2, int(p2W), int(p2L))
+					}
+
+					fields = append(fields, &discordgo.MessageEmbedField{
+						Name:   fmt.Sprintf("⚔️ Match %d", int(table)),
+						Value:  value,
+						Inline: false,
+					})
+				}
+
+				//Clear pending round
+				roundsData["pending"] = nil
+
+				err_save := saveSeason()
+				botData.Mutex.Unlock()
+				if err_save != nil {
+					log.Printf("Error saving round to json: %v", err_save)
+					return
+				}
+
+				//build embed
+				embed := &discordgo.MessageEmbed{
+					Title:  fmt.Sprintf("🍁 Round %d Pairings 🍁", currentRound),
+					Fields: fields,
+				}
+
+				//Make announcement
+				_, err_announce := s.ChannelMessageSendComplex(
+					os.Getenv("MATCHES_CHNL_ID"),
+
+					&discordgo.MessageSend{
+						Content: "@everyone",
+
+						Embeds: []*discordgo.MessageEmbed{
+							embed,
+						},
+
+						AllowedMentions: &discordgo.MessageAllowedMentions{
+							Parse: []discordgo.AllowedMentionType{
+								discordgo.AllowedMentionTypeEveryone,
+							},
+						},
+					},
+				)
+
+				if err_announce != nil {
+					log.Printf("Error making Round Announcement: %v\n", err_announce)
+					return
+				}
+
+				//send ephemeral reply
+				s.InteractionRespond(
+					i.Interaction,
+					&discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: fmt.Sprintf("Round %d activated. An announcement has been made in <#%v>.\n\nOnce the round is complete you can use `/round close` to close out the round.",
+								currentRound, os.Getenv("MATCHES_CHNL_ID")),
+							Flags: discordgo.MessageFlagsEphemeral,
+						},
+					},
+				)
+
 			case "close":
 				//ENDs the round.
 				//How do we handle unreported matches?

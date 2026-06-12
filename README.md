@@ -64,12 +64,12 @@ Finished 🟩 | Developed 🟨 | Nonstarted 🟥
 
 ---
 
-#### `/round new` 🟥
+#### `/round new` 🟨
 **Description:**  Generates pairings for the next round using current standings, assigns matchups and byes, and writes round structure to season data. 
 
 ---
 
-#### `/round post` 🟥
+#### `/round post` 🟨
 **Description:**  Publishes round and matches info in matchups channel. Separated from `/round new` to allow for QA.
 
 ---

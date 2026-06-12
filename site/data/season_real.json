@@ -1,0 +1,93 @@
+{
+    "rounds": {
+        "1": {
+            "pairings": [
+                {
+                    "bye": false,
+                    "match_id": "S06-001",
+                    "player1": "222215591765868544",
+                    "player2": "162114243557195776",
+                    "reported": true,
+                    "result": "2-1",
+                    "table": 1,
+                    "winner": "162114243557195776"
+                },
+                {
+                    "bye": false,
+                    "match_id": "S06-002",
+                    "player1": "222215591765868544",
+                    "player2": "162114243557195776",
+                    "reported": true,
+                    "result": "2-1",
+                    "table": 2,
+                    "winner": "162114243557195776"
+                },
+                {
+                    "bye": true,
+                    "match_id": "",
+                    "player1": "222215591765868544",
+                    "player2": "",
+                    "reported": true,
+                    "result": "BYE",
+                    "table": 3,
+                    "winner": "222215591765868544"
+                }
+            ],
+            "status": "completed"
+        },
+        "pending": {
+            "pairings": [
+                {}
+            ],
+            "status": "pending"
+        }
+    },
+    "season_players": {
+        "162114243557195775": {
+            "active": true,
+            "decklist": {
+                "approved": true,
+                "name": "Discard Moon",
+                "url": "https://moxfield.com/decks/fa-TvMUddkq1xihS_nUViA"
+            },
+            "dropped": false,
+            "opponents": [
+                "222215591765868544",
+                "333333333333333333",
+                "444444444444444444"
+            ],
+            "pairings": [
+                "222215591765868544"
+            ],
+            "received_bye": false,
+            "role": "battler",
+            "standings": {
+                "game_losses": 6,
+                "game_wins": 11,
+                "losses": 2,
+                "points": 15,
+                "wins": 5
+            }
+        },
+        "162114243557195776": {
+            "active": true,
+            "decklist": {
+                "approved": true,
+                "name": "Test Deck",
+                "url": "https://moxfield.com/decks/GMKkqs9_C0-sucvY3ax7_w"
+            },
+            "dropped": false,
+            "opponents": [],
+            "pairings": [],
+            "received_bye": false,
+            "role": "battler",
+            "standings": {
+                "game_losses": 0,
+                "game_wins": 0,
+                "losses": 0,
+                "points": 0,
+                "wins": 0
+            }
+        }
+    }
+}
