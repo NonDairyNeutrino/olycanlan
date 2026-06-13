@@ -577,7 +577,8 @@ func registerCommands(s *discordgo.Session) {
 }
 
 // Ephemeral reply function.
-// Cleans up the code quite a bit.
+// Snippet: "rEph"
+// Cleans up the code quite a bit. Does not handle embeds. ALWAYS ephemeral
 func replyEphemeral(s *discordgo.Session, i *discordgo.InteractionCreate, message string) {
 	s.InteractionRespond(
 		i.Interaction,
@@ -669,16 +670,7 @@ func main() {
 			}
 
 			if !memberHasRole(i.Member, allowedRoles) {
-				s.InteractionRespond(
-					i.Interaction,
-					&discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: "Only active league members can execute this command. Please contact a league organizer if you are missing the correct role.",
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					},
-				)
+				replyEphemeral(s, i, "Only active league members can execute this command. Please contact a league organizer if you are missing the correct role.")
 				return
 			}
 
@@ -729,16 +721,7 @@ func main() {
 
 			//Logic Check - If round is not "active" then result cannot be submitted
 			if roundData["status"].(string) != "active" {
-				s.InteractionRespond(
-					i.Interaction,
-					&discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: "There is no currently active round. Please contact a league organizer, or report your match once the next round begins.",
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					},
-				)
+				replyEphemeral(s, i, "There is no currently active round. Please contact a league organizer, or report your match once the next round begins.")
 				botData.Mutex.Unlock()
 				return
 			}
@@ -749,6 +732,7 @@ func main() {
 				//Get pairings data
 				currentPairings := roundData["pairings"].([]interface{})
 				bountyFound := false
+
 				//Look through pairings (bounties) for duo that matches our winner/loser
 				for _, pairing := range currentPairings {
 					p := pairing.(map[string]interface{})
@@ -769,22 +753,15 @@ func main() {
 				}
 				//If bountyFound = false still,
 				if !bountyFound {
-					s.InteractionRespond(
-						i.Interaction,
-						&discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseChannelMessageWithSource,
-							Data: &discordgo.InteractionResponseData{
-								Content: fmt.Sprintf("No bounty match-up found for <@%v> and <@%v>. Match not logged\n\nIf non-bounty, please resubmit `/result` as with bounty as False.",
-									matchResultReport.Winner, matchResultReport.Loser),
-								Flags: discordgo.MessageFlagsEphemeral,
-							},
-						},
-					)
+					replyEphemeral(s, i, fmt.Sprintf("No bounty match-up found for <@%v> and <@%v>. Match not logged\n\nIf non-bounty, please resubmit `/result` as with bounty as False.",
+						matchResultReport.Winner, matchResultReport.Loser))
 					botData.Mutex.Unlock()
 					return
 				}
 
+				//Check active matches (non completed or voided) for already reported bounty with this pairing
 				activeMatches := filterActiveMatches(currentSeasonMatches)
+
 			}
 
 			//construct the next match id of form S06-001
@@ -819,16 +796,7 @@ func main() {
 				log.Printf("Error saving matches.json: %v", err)
 
 				//ephemeral reply stating there was an error
-				s.InteractionRespond(
-					i.Interaction,
-					&discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: "Failed to record match result.",
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					},
-				)
+				replyEphemeral(s, i, "Failed to record match result.")
 				return
 			}
 
@@ -858,16 +826,7 @@ func main() {
 			)
 			if errAnnounce != nil {
 				log.Printf("Error making match announcement: %v\n", errAnnounce)
-				s.InteractionRespond(
-					i.Interaction,
-					&discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: "Match recorded successfully, but announcement failed.",
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					},
-				)
+				replyEphemeral(s, i, "Match recorded successfully, but announcement failed.")
 				return
 			}
 
@@ -890,17 +849,8 @@ func main() {
 				msg.ChannelID,
 				msg.ID,
 			)
+			replyEphemeral(s, i, fmt.Sprintf("Match Recorded Successfully.\n%s", msgURL))
 
-			s.InteractionRespond(
-				i.Interaction,
-				&discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: fmt.Sprintf("Match Recorded Successfully.\n%s", msgURL),
-						Flags:   discordgo.MessageFlagsEphemeral,
-					},
-				},
-			)
 		case "signup":
 			sub := i.ApplicationCommandData().Options[0].Name
 			switch sub {
@@ -911,13 +861,7 @@ func main() {
 
 				//if signupStatus is false, let the user know and return
 				if !signupStatus {
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: "Signups are currently closed for this season. Please use `/signup jammer` if you are interested in joining as a Jammer 👊.",
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
+					replyEphemeral(s, i, "Signups are currently closed for this season. Please use `/signup jammer` if you are interested in joining as a Jammer 👊.")
 					return
 				}
 
@@ -928,13 +872,7 @@ func main() {
 				for _, r := range guildMember.Roles {
 					if r == os.Getenv("BATTLER_ID") {
 						//Already signed up!
-						s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseChannelMessageWithSource,
-							Data: &discordgo.InteractionResponseData{
-								Content: "You are already signed up as a Battler ⚔️ for this season.\n*If you would like to change roles to a Jammer 👊 you can use the `/signup jammer` command.*",
-								Flags:   discordgo.MessageFlagsEphemeral,
-							},
-						})
+						replyEphemeral(s, i, "You are already signed up as a Battler ⚔️ for this season.\n*If you would like to change roles to a Jammer 👊 you can use the `/signup jammer` command.*")
 						return
 					}
 					if r == os.Getenv("JAMMER_ID") {
@@ -1042,13 +980,7 @@ func main() {
 				s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, os.Getenv("BATTLER_ID"))
 
 				//Respond with an ephemeral message
-				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: "Thanks for signing up as a Battler ⚔️ for this season!\n**Please use the `/signup decklist` command to provide your decklist before the season starts.**",
-						Flags:   discordgo.MessageFlagsEphemeral,
-					},
-				})
+				replyEphemeral(s, i, "Thanks for signing up as a Battler ⚔️ for this season!\n**Please use the `/signup decklist` command to provide your decklist before the season starts.**")
 			// /signup jammer
 			case "jammer":
 
@@ -1059,13 +991,7 @@ func main() {
 				for _, r := range guildMember.Roles {
 					if r == os.Getenv("JAMMER_ID") {
 						//Already signed up!
-						s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseChannelMessageWithSource,
-							Data: &discordgo.InteractionResponseData{
-								Content: "You are already signed up as a Jammer 👊 for this season.\n*If you would like to change roles to a Battler ⚔️ and signups are currently open you can use the `/signup battler` command.*",
-								Flags:   discordgo.MessageFlagsEphemeral,
-							},
-						})
+						replyEphemeral(s, i, "You are already signed up as a Jammer 👊 for this season.\n*If you would like to change roles to a Battler ⚔️ and signups are currently open you can use the `/signup battler` command.*")
 						return
 					}
 					if r == os.Getenv("BATTLER_ID") {
@@ -1172,13 +1098,8 @@ func main() {
 				s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, os.Getenv("JAMMER_ID"))
 
 				//Respond with an ephemeral message
-				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: "Thanks for signing up as a Jammer 👊 for this season!",
-						Flags:   discordgo.MessageFlagsEphemeral,
-					},
-				})
+				replyEphemeral(s, i, "Thanks for signing up as a Jammer 👊 for this season!")
+
 			// /signup decklist
 			case "decklist":
 				//Update season.json -> "season_players" -> userID -> "decklist" -> "name" and "url"
@@ -1189,16 +1110,7 @@ func main() {
 				}
 
 				if !memberHasRole(i.Member, allowedRoles) {
-					s.InteractionRespond(
-						i.Interaction,
-						&discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseChannelMessageWithSource,
-							Data: &discordgo.InteractionResponseData{
-								Content: "Only Battlers ⚔️ need to submit a decklist. Please contact a league organizer if you are missing the correct role.",
-								Flags:   discordgo.MessageFlagsEphemeral,
-							},
-						},
-					)
+					replyEphemeral(s, i, "Only Battlers ⚔️ need to submit a decklist. Please contact a league organizer if you are missing the correct role.")
 					return
 				}
 
@@ -1207,13 +1119,7 @@ func main() {
 
 				//If exists = false, then there is something here. They dont have player data in season.json but are holding the battler role.
 				if !exists {
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: fmt.Sprintf("No seasonal player data found for <@%v>. An organizer will correct the issue shortly", i.Member.User.ID),
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
+					replyEphemeral(s, i, fmt.Sprintf("No seasonal player data found for <@%v>. An organizer will correct the issue shortly", i.Member.User.ID))
 
 					//Make error announcement in organizer channel
 					s.ChannelMessageSend(
@@ -1232,24 +1138,12 @@ func main() {
 
 				//if signupStatus is false and their currentDecklist was not submitted, let the user know.
 				if !signupStatus && currentDecklist == "Not Submitted" {
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: "Signups are currently closed for this season. It appears you do not have a submitted decklist. Please contact an organizer.",
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
+					replyEphemeral(s, i, "Signups are currently closed for this season. It appears you do not have a submitted decklist. Please contact an organizer.")
 					return
 				}
 				//if signupStatus is false, let the user know and return including their submitted decklist.
 				if !signupStatus {
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: fmt.Sprintf("Signups are currently closed for this season. Please use the original decklist submitted:\n%v", currentDecklist),
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
+					replyEphemeral(s, i, fmt.Sprintf("Signups are currently closed for this season. Please use the original decklist submitted:\n%v", currentDecklist))
 					return
 				}
 
@@ -1281,13 +1175,7 @@ func main() {
 				}
 				_, err := neturl.ParseRequestURI(url)
 				if err != nil {
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: fmt.Sprintf("The URL provided is invalid. Please resubmit `/signup decklist` with a valid URL.\n%v", url),
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
+					replyEphemeral(s, i, fmt.Sprintf("The URL provided is invalid. Please resubmit `/signup decklist` with a valid URL.\n%v", url))
 					return
 				}
 
@@ -1308,13 +1196,7 @@ func main() {
 				}
 
 				//Reply with ephemeral reply confirming submission
-				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: fmt.Sprintf("Your decklist has been submitted.\n[%v](%v)", name, url),
-						Flags:   discordgo.MessageFlagsEphemeral,
-					},
-				})
+				replyEphemeral(s, i, fmt.Sprintf("Your decklist has been submitted.\n[%v](%v)", name, url))
 
 				//Send message that the decklist is ready for review in admin channel
 				embed := &discordgo.MessageEmbed{
@@ -1358,16 +1240,7 @@ func main() {
 			}
 			// if they dont have the role, reply and return
 			if !memberHasRole(i.Member, allowedRoles) {
-				s.InteractionRespond(
-					i.Interaction,
-					&discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: "You are already not an active participant in the current season. Carry on 🍁",
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					},
-				)
+				replyEphemeral(s, i, "You are already not an active participant in the current season. Carry on 🍁")
 				return
 			}
 
@@ -1415,13 +1288,7 @@ func main() {
 				}
 
 				//Tell the player they have been dropped
-				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: fmt.Sprintf("You have been dropped as a %v for the current season. Hope to see you again in the future!", roleName),
-						Flags:   discordgo.MessageFlagsEphemeral,
-					},
-				})
+				replyEphemeral(s, i, fmt.Sprintf("You have been dropped as a %v for the current season. Hope to see you again in the future!", roleName))
 				//Make drop announcement in organizer channel
 				s.ChannelMessageSend(
 					os.Getenv("ADMIN_CHNL_ID"),
@@ -1440,16 +1307,7 @@ func main() {
 			}
 
 			if !memberHasRole(i.Member, allowedRoles) {
-				s.InteractionRespond(
-					i.Interaction,
-					&discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: "Only admins/organizers may complete this command. Carry on 🍁!",
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					},
-				)
+				replyEphemeral(s, i, "Only admins/organizers may complete this command. Carry on 🍁!")
 				return
 			}
 
@@ -1477,22 +1335,10 @@ func main() {
 					}
 
 					//Reply with a hidden message that the league is now open
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: "Signups for the current league have been opened!",
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
+					replyEphemeral(s, i, "Signups for the current league have been opened!")
 				} else {
 					//Reply and say that they are already open
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: "The league is already open! Carry on 🍁",
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
+					replyEphemeral(s, i, "The league is already open! Carry on 🍁")
 				}
 			case "close-signups":
 				//Read metadata for if league signups are open
@@ -1538,22 +1384,10 @@ func main() {
 					}
 
 					//Reply with a hidden message that the league is now closed
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: "Signups for the current league have been closed!",
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
+					replyEphemeral(s, i, "Signups for the current league have been closed!")
 				} else {
 					//Reply and say that they are already closed
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: "The league is already closed! Carry on 🍁",
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
+					replyEphemeral(s, i, "The league is already closed! Carry on 🍁")
 				}
 			case "new-season":
 
@@ -1577,13 +1411,7 @@ func main() {
 					startDate, err := time.Parse("01-02-2006", inputDate)
 					if err != nil {
 						//Send hidden command to resend with correct date formatting
-						s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseChannelMessageWithSource,
-							Data: &discordgo.InteractionResponseData{
-								Content: fmt.Sprintf("Your submitted date `%v` was not in the correct MM-DD-YYYY format", inputDate),
-								Flags:   discordgo.MessageFlagsEphemeral,
-							},
-						})
+						replyEphemeral(s, i, fmt.Sprintf("Your submitted date `%v` was not in the correct MM-DD-YYYY format", inputDate))
 
 						//unlock data before evacuating
 						botData.Mutex.Unlock()
@@ -1718,13 +1546,7 @@ func main() {
 					}
 
 					//Reply with a hidden message that the league is now open
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: fmt.Sprintf("Olympia Canlander Season %v is now open!\nAn announcement will be posted in <#%v>", newSeasonNum, os.Getenv("SIGNUP_CHNL_ID")),
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
+					replyEphemeral(s, i, fmt.Sprintf("Olympia Canlander Season %v is now open!\nAn announcement will be posted in <#%v>", newSeasonNum, os.Getenv("SIGNUP_CHNL_ID")))
 
 					//format a display date
 					//NOT NECESSARY BUT KEEPING FOR NOW -> location, _ := time.LoadLocation("America/Los_Angeles")
@@ -1776,13 +1598,7 @@ func main() {
 
 				} else {
 					//Reply and say that they are already open
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: "The current league is already open.\nThe current league season must be closed (`/league close-signups`) before a new season can be began.\nCarry on 🍁",
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
+					replyEphemeral(s, i, "The current league is already open.\nThe current league season must be closed (`/league close-signups`) before a new season can be began.\nCarry on 🍁")
 				}
 			}
 		case "round":
@@ -1794,16 +1610,7 @@ func main() {
 			}
 
 			if !memberHasRole(i.Member, allowedRoles) {
-				s.InteractionRespond(
-					i.Interaction,
-					&discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: "Only admins/organizers may complete this command. Carry on 🍁!",
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					},
-				)
+				replyEphemeral(s, i, "Only admins/organizers may complete this command. Carry on 🍁!")
 				return
 			}
 
@@ -1826,16 +1633,7 @@ func main() {
 				currentRound := seasonMeta["current_round"].(float64)
 
 				if currentRound == seasonMeta["total_rounds"] { //No need to make a new round if we are already on final round
-					s.InteractionRespond(
-						i.Interaction,
-						&discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseChannelMessageWithSource,
-							Data: &discordgo.InteractionResponseData{
-								Content: "The bot's records show that an additional round is not needed. Carry on 🍁!",
-								Flags:   discordgo.MessageFlagsEphemeral,
-							},
-						},
-					)
+					replyEphemeral(s, i, "The bot's records show that an additional round is not needed. Carry on 🍁!")
 					return
 				}
 
@@ -1844,16 +1642,7 @@ func main() {
 				roundStatus := roundData["status"].(string)
 
 				if roundStatus != "completed" { // Cannot generate a new round without completing the previous round
-					s.InteractionRespond(
-						i.Interaction,
-						&discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseChannelMessageWithSource,
-							Data: &discordgo.InteractionResponseData{
-								Content: fmt.Sprintf("Round %v has not been completed in the bot's data.\nPlease use `/round close` to finalize the previous round.", currentRound),
-								Flags:   discordgo.MessageFlagsEphemeral,
-							},
-						},
-					)
+					replyEphemeral(s, i, fmt.Sprintf("Round %v has not been completed in the bot's data.\nPlease use `/round close` to finalize the previous round.", currentRound))
 					return
 				}
 
@@ -1897,16 +1686,7 @@ func main() {
 				//Lone undefeated player check
 				//ASSUMES: more than 1 active player, and SOMEONE is undefeated. These both must be true for our league.
 				if roundPlayers[1].Losses > 0 {
-					s.InteractionRespond(
-						i.Interaction,
-						&discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseChannelMessageWithSource,
-							Data: &discordgo.InteractionResponseData{
-								Content: fmt.Sprintf("The tournament is over! <@%s> is the sole undefeated player. No need to generate a new round", roundPlayers[0].ID),
-								Flags:   discordgo.MessageFlagsEphemeral,
-							},
-						},
-					)
+					replyEphemeral(s, i, fmt.Sprintf("The tournament is over! <@%s> is the sole undefeated player. No need to generate a new round", roundPlayers[0].ID))
 					botData.Mutex.Unlock()
 					return
 				}
@@ -2013,16 +1793,7 @@ func main() {
 				log.Printf("Validity: %v", valid)
 				if !valid {
 					//Unable to generate pairings after 10 tries.... notify admin
-					s.InteractionRespond(
-						i.Interaction,
-						&discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseChannelMessageWithSource,
-							Data: &discordgo.InteractionResponseData{
-								Content: "Round pairing generation failed after 50 attempts.\n\nPlease contact the bot manager and review the seasonal player data.",
-								Flags:   discordgo.MessageFlagsEphemeral,
-							},
-						},
-					)
+					replyEphemeral(s, i, "Round pairing generation failed after 50 attempts.\n\nPlease contact the bot manager and review the seasonal player data.")
 					botData.Mutex.Unlock()
 					return
 				}
@@ -2098,16 +1869,7 @@ func main() {
 				playerData := botData.Season["season_players"].(map[string]interface{}) // Pull player data
 
 				if !ok || pendingRound == nil { // if no pending round found, kick back at command user
-					s.InteractionRespond(
-						i.Interaction,
-						&discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseChannelMessageWithSource,
-							Data: &discordgo.InteractionResponseData{
-								Content: "No pending round found to post. Use `/round new` to generate a new league round first.",
-								Flags:   discordgo.MessageFlagsEphemeral,
-							},
-						},
-					)
+					replyEphemeral(s, i, "No pending round found to post. Use `/round new` to generate a new league round first.")
 					botData.Mutex.Unlock()
 					return
 				}
@@ -2196,17 +1958,8 @@ func main() {
 				}
 
 				//send ephemeral reply
-				s.InteractionRespond(
-					i.Interaction,
-					&discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: fmt.Sprintf("Round %d activated. An announcement has been made in <#%v>.\n\nOnce the round is complete you can use `/round close` to close out the round.",
-								currentRound, os.Getenv("MATCHES_CHNL_ID")),
-							Flags: discordgo.MessageFlagsEphemeral,
-						},
-					},
-				)
+				replyEphemeral(s, i, fmt.Sprintf("Round %d activated. An announcement has been made in <#%v>.\n\nOnce the round is complete you can use `/round close` to close out the round.",
+					currentRound, os.Getenv("MATCHES_CHNL_ID")))
 
 			case "close":
 				//ENDs the round.
@@ -2230,16 +1983,7 @@ func main() {
 			}
 
 			if !memberHasRole(i.Member, allowedRoles) {
-				s.InteractionRespond(
-					i.Interaction,
-					&discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: "Only admins/organizers may complete this command. Carry on 🍁!",
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					},
-				)
+				replyEphemeral(s, i, "Only admins/organizers may complete this command. Carry on 🍁!")
 				return
 			}
 
@@ -2263,13 +2007,7 @@ func main() {
 
 					//if signupStatus is false, let the user know and return
 					if !signupStatus {
-						s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseChannelMessageWithSource,
-							Data: &discordgo.InteractionResponseData{
-								Content: "Signups are currently closed for this season. Please use `/league open-signups` to open signups and then resubmit.",
-								Flags:   discordgo.MessageFlagsEphemeral,
-							},
-						})
+						replyEphemeral(s, i, "Signups are currently closed for this season. Please use `/league open-signups` to open signups and then resubmit.")
 						return
 					}
 
@@ -2280,13 +2018,7 @@ func main() {
 					for _, r := range guildMember.Roles {
 						if r == os.Getenv("BATTLER_ID") {
 							//Already signed up!
-							s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-								Type: discordgo.InteractionResponseChannelMessageWithSource,
-								Data: &discordgo.InteractionResponseData{
-									Content: fmt.Sprintf("<@%v> is already signed up as a Battler ⚔️ for this season.", player.ID),
-									Flags:   discordgo.MessageFlagsEphemeral,
-								},
-							})
+							replyEphemeral(s, i, fmt.Sprintf("<@%v> is already signed up as a Battler ⚔️ for this season.", player.ID))
 							return
 						}
 						if r == os.Getenv("JAMMER_ID") {
@@ -2394,13 +2126,7 @@ func main() {
 					s.GuildMemberRoleAdd(i.GuildID, player.ID, os.Getenv("BATTLER_ID"))
 
 					//Respond with an ephemeral message
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: fmt.Sprintf("<@%v> has been signed up as a Battler ⚔️ for this season!\n**Please direct them to use the `/signup decklist` command to provide their decklist before the season starts.**", player.ID),
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
+					replyEphemeral(s, i, fmt.Sprintf("<@%v> has been signed up as a Battler ⚔️ for this season!\n**Please direct them to use the `/signup decklist` command to provide their decklist before the season starts.**", player.ID))
 
 				case "jammer":
 
@@ -2412,13 +2138,7 @@ func main() {
 					for _, r := range guildMember.Roles {
 						if r == os.Getenv("JAMMER_ID") {
 							//Already signed up!
-							s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-								Type: discordgo.InteractionResponseChannelMessageWithSource,
-								Data: &discordgo.InteractionResponseData{
-									Content: fmt.Sprintf("<@%v> is already signed up as a Jammer 👊 for this season.", player.ID),
-									Flags:   discordgo.MessageFlagsEphemeral,
-								},
-							})
+							replyEphemeral(s, i, fmt.Sprintf("<@%v> is already signed up as a Jammer 👊 for this season.", player.ID))
 							return
 						}
 						if r == os.Getenv("BATTLER_ID") {
@@ -2525,13 +2245,7 @@ func main() {
 					s.GuildMemberRoleAdd(i.GuildID, player.ID, os.Getenv("JAMMER_ID"))
 
 					//Respond with an ephemeral message
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: fmt.Sprintf("<@%v> has been signed up as a Jammer 👊 for this season!", player.ID),
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
+					replyEphemeral(s, i, fmt.Sprintf("<@%v> has been signed up as a Jammer 👊 for this season!", player.ID))
 				}
 
 			case "player-drop": //Admin version of drop for selected player
@@ -2553,16 +2267,7 @@ func main() {
 
 				// if they dont have the role, reply and return
 				if !memberHasRole(guildMember, allowedRoles) {
-					s.InteractionRespond(
-						i.Interaction,
-						&discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseChannelMessageWithSource,
-							Data: &discordgo.InteractionResponseData{
-								Content: fmt.Sprintf("<@%v> is already not an active participant in the current season. Carry on 🍁", player.ID),
-								Flags:   discordgo.MessageFlagsEphemeral,
-							},
-						},
-					)
+					replyEphemeral(s, i, fmt.Sprintf("<@%v> is already not an active participant in the current season. Carry on 🍁", player.ID))
 					return
 				}
 
@@ -2601,13 +2306,7 @@ func main() {
 					}
 
 					//Tell the player they have been dropped
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: fmt.Sprintf("<@%v> has been dropped as a %v for the current season.", player.ID, roleName),
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
+					replyEphemeral(s, i, fmt.Sprintf("<@%v> has been dropped as a %v for the current season.", player.ID, roleName))
 					//Make drop announcement in organizer channel
 					s.ChannelMessageSend(
 						os.Getenv("ADMIN_CHNL_ID"),
@@ -2639,13 +2338,7 @@ func main() {
 				existingSeasonPlayer, exists := seasonPlayers[player.ID]
 				if !exists {
 					//player does not exist in seasonal data.
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: fmt.Sprintf("No seasonal player data found for <@%v>", player.ID),
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
+					replyEphemeral(s, i, fmt.Sprintf("No seasonal player data found for <@%v>", player.ID))
 					botData.Mutex.Unlock()
 					return
 				}
@@ -2684,13 +2377,7 @@ func main() {
 				}
 
 				//Reply to admin
-				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: fmt.Sprintf("<@%v> has had their league points adjusted to `%v` from `%v`.\nA message will be posted in <#%s>", player.ID, adjustedPoints, originalPoints, os.Getenv("ADMIN_CHNL_ID")),
-						Flags:   discordgo.MessageFlagsEphemeral,
-					},
-				})
+				replyEphemeral(s, i, fmt.Sprintf("<@%v> has had their league points adjusted to `%v` from `%v`.\nA message will be posted in <#%s>", player.ID, adjustedPoints, originalPoints, os.Getenv("ADMIN_CHNL_ID")))
 
 				//Make post in admin channel
 				s.ChannelMessageSend(
@@ -2842,46 +2529,19 @@ func main() {
 
 				if !exists {
 					//Match does not exist in database
-					s.InteractionRespond(
-						i.Interaction,
-						&discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseChannelMessageWithSource,
-							Data: &discordgo.InteractionResponseData{
-								Content: fmt.Sprintf("The matchID you submitted was not found: `%v`", matchID),
-								Flags:   discordgo.MessageFlagsEphemeral,
-							},
-						},
-					)
+					replyEphemeral(s, i, fmt.Sprintf("The matchID you submitted was not found: `%v`", matchID))
 					return
 				}
 
 				if matchData["status"] == "logged" {
 					//Match already logged and cant be edited anymore
-					s.InteractionRespond(
-						i.Interaction,
-						&discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseChannelMessageWithSource,
-							Data: &discordgo.InteractionResponseData{
-								Content: fmt.Sprintf("The round for the matchID you submitted has already been completed and the match was logged: `%v`\n\nTo revise the match data, please contact the bot organizer.", matchID),
-								Flags:   discordgo.MessageFlagsEphemeral,
-							},
-						},
-					)
+					replyEphemeral(s, i, fmt.Sprintf("The round for the matchID you submitted has already been completed and the match was logged: `%v`\n\nTo revise the match data, please contact the bot organizer.", matchID))
 					return
 				}
 
 				if matchData["status"] == "voided" {
 					//Match already voided
-					s.InteractionRespond(
-						i.Interaction,
-						&discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseChannelMessageWithSource,
-							Data: &discordgo.InteractionResponseData{
-								Content: fmt.Sprintf("The matchID you submitted has already been voided: `%v`", matchID),
-								Flags:   discordgo.MessageFlagsEphemeral,
-							},
-						},
-					)
+					replyEphemeral(s, i, fmt.Sprintf("The matchID you submitted has already been voided: `%v`", matchID))
 					return
 				}
 
@@ -2921,31 +2581,13 @@ func main() {
 				//check if match details changed at all
 				if winnerRev == currentWinner && loserRev == currentLoser &&
 					resultRev == currentResult && bountyRev == currentBounty {
-					s.InteractionRespond(
-						i.Interaction,
-						&discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseChannelMessageWithSource,
-							Data: &discordgo.InteractionResponseData{
-								Content: fmt.Sprintf("The match details submitted matches the log for `%v`.\nEither the correction was already made, or review your submission and resubmit.", matchID),
-								Flags:   discordgo.MessageFlagsEphemeral,
-							},
-						},
-					)
+					replyEphemeral(s, i, fmt.Sprintf("The match details submitted matches the log for `%v`.\nEither the correction was already made, or review your submission and resubmit.", matchID))
 					return
 				}
 
 				//check if winner == loser
 				if winnerRev == loserRev {
-					s.InteractionRespond(
-						i.Interaction,
-						&discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseChannelMessageWithSource,
-							Data: &discordgo.InteractionResponseData{
-								Content: fmt.Sprintf("The winner and loser cannot match. Please resubmit.\nMatch ID: `%v`.", matchID),
-								Flags:   discordgo.MessageFlagsEphemeral,
-							},
-						},
-					)
+					replyEphemeral(s, i, fmt.Sprintf("The winner and loser cannot match. Please resubmit.\nMatch ID: `%v`.", matchID))
 					return
 				}
 
@@ -3015,16 +2657,7 @@ func main() {
 				}
 
 				//reply to the user
-				s.InteractionRespond(
-					i.Interaction,
-					&discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: fmt.Sprintf("Match (ID:`%v`) Edited.\nWinner: <@%v> | Loser: <@%v> | Result: %v | Bounty: %v\nOriginal message edited: %s", matchID, winnerRev, loserRev, resultRev, bountyRev, messageLink),
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					},
-				)
+				replyEphemeral(s, i, fmt.Sprintf("Match (ID:`%v`) Edited.\nWinner: <@%v> | Loser: <@%v> | Result: %v | Bounty: %v\nOriginal message edited: %s", matchID, winnerRev, loserRev, resultRev, bountyRev, messageLink))
 
 			case "match-delete": //Removes a match from the matches data using its matchID.
 				//collect options data submitted by command
@@ -3038,31 +2671,13 @@ func main() {
 
 				if !exists {
 					//Match does not exist in database
-					s.InteractionRespond(
-						i.Interaction,
-						&discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseChannelMessageWithSource,
-							Data: &discordgo.InteractionResponseData{
-								Content: fmt.Sprintf("The matchID you submitted was not found: `%v`", matchID),
-								Flags:   discordgo.MessageFlagsEphemeral,
-							},
-						},
-					)
+					replyEphemeral(s, i, fmt.Sprintf("The matchID you submitted was not found: `%v`", matchID))
 					return
 				}
 
 				if matchData["status"] == "logged" {
 					//Match already logged and cant be edited anymore
-					s.InteractionRespond(
-						i.Interaction,
-						&discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseChannelMessageWithSource,
-							Data: &discordgo.InteractionResponseData{
-								Content: fmt.Sprintf("The round for the matchID you submitted has already been completed and the match was logged: `%v`\n\nTo delete the match data, please contact the bot organizer.", matchID),
-								Flags:   discordgo.MessageFlagsEphemeral,
-							},
-						},
-					)
+					replyEphemeral(s, i, fmt.Sprintf("The round for the matchID you submitted has already been completed and the match was logged: `%v`\n\nTo delete the match data, please contact the bot organizer.", matchID))
 					return
 				}
 
@@ -3113,16 +2728,7 @@ func main() {
 				}
 
 				//Reply with ephemeral msg
-				s.InteractionRespond(
-					i.Interaction,
-					&discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: fmt.Sprintf("Match `%v` has been voided\nOriginal Post Edited:%s", matchID, messageLink),
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					},
-				)
+				replyEphemeral(s, i, fmt.Sprintf("Match `%v` has been voided\nOriginal Post Edited:%s", matchID, messageLink))
 			}
 		}
 	})
