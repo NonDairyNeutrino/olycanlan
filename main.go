@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"math/rand/v2"
 	neturl "net/url"
 	"os"
@@ -575,6 +576,21 @@ func registerCommands(s *discordgo.Session) {
 	}
 }
 
+// Ephemeral reply function.
+// Cleans up the code quite a bit.
+func replyEphemeral(s *discordgo.Session, i *discordgo.InteractionCreate, message string) {
+	s.InteractionRespond(
+		i.Interaction,
+		&discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: message,
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		},
+	)
+}
+
 // function for role check for slash commands.
 // returns true if role is met, false if not.
 func memberHasRole(member *discordgo.Member, allowedRoles []string) bool {
@@ -588,6 +604,22 @@ func memberHasRole(member *discordgo.Member, allowedRoles []string) bool {
 		}
 	}
 	return false
+}
+
+// function to filter matches in the current season for "active" matches (NOT logged and NOT voided)
+// returns a new filtered map
+func filterActiveMatches(matches map[string]interface{}) map[string]interface{} {
+	filtered := make(map[string]interface{})
+
+	for matchID, match := range matches {
+		matchData := match.(map[string]interface{})
+		status := matchData["status"].(string)
+		if status != "logged" && status != "voided" {
+			filtered[matchID] = match
+		}
+	}
+
+	return filtered
 }
 
 func main() {
@@ -626,6 +658,9 @@ func main() {
 
 		switch i.ApplicationCommandData().Name {
 		case "result":
+
+			//TODO: Check when a bounty match is reported if another bounty was already reported.
+			//TODO: Check when a bounty match is reported if its ACTUALLY a bounty match (pairings).
 
 			//check if user is allowed to complete command
 			allowedRoles := []string{
@@ -680,12 +715,77 @@ func main() {
 			botData.Mutex.Lock()
 
 			//Get season number & make prefix
-			currentSeason := int(botData.Metadata["current_season"].(map[string]interface{})["season"].(float64))
+			metaSeason := botData.Metadata["current_season"].(map[string]interface{})
+			currentSeason := int(metaSeason["season"].(float64))
 			seasonPrefix := fmt.Sprintf("S%02d", currentSeason)
 
 			//Read current season matches & metadata
 			currentSeasonMatches := botData.Matches["current_season"].(map[string]interface{})["matches"].(map[string]interface{})
 			currentSeasonMetadata := botData.Matches["current_season"].(map[string]interface{})["metadata"].(map[string]interface{})
+
+			//Read current round data
+			currentRoundStr := fmt.Sprintf("%v", metaSeason["current_round"].(float64))
+			roundData := botData.Season["rounds"].(map[string]interface{})[currentRoundStr].(map[string]interface{})
+
+			//Logic Check - If round is not "active" then result cannot be submitted
+			if roundData["status"].(string) != "active" {
+				s.InteractionRespond(
+					i.Interaction,
+					&discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: "There is no currently active round. Please contact a league organizer, or report your match once the next round begins.",
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					},
+				)
+				botData.Mutex.Unlock()
+				return
+			}
+
+			//Logic check - IF BOUNTY, check if bounty exists for this pairing, and if it was previously reported
+			if matchResultReport.Bounty {
+
+				//Get pairings data
+				currentPairings := roundData["pairings"].([]interface{})
+				bountyFound := false
+				//Look through pairings (bounties) for duo that matches our winner/loser
+				for _, pairing := range currentPairings {
+					p := pairing.(map[string]interface{})
+
+					// if bye, skip (also should be the last)
+					if p["bye"].(bool) {
+						continue
+					}
+
+					p1 := p["player1"].(string)
+					p2 := p["player2"].(string)
+
+					if (matchResultReport.Winner == p1 && matchResultReport.Loser == p2) ||
+						(matchResultReport.Winner == p2 && matchResultReport.Loser == p1) {
+						bountyFound = true
+						break
+					}
+				}
+				//If bountyFound = false still,
+				if !bountyFound {
+					s.InteractionRespond(
+						i.Interaction,
+						&discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Content: fmt.Sprintf("No bounty match-up found for <@%v> and <@%v>. Match not logged\n\nIf non-bounty, please resubmit `/result` as with bounty as False.",
+									matchResultReport.Winner, matchResultReport.Loser),
+								Flags: discordgo.MessageFlagsEphemeral,
+							},
+						},
+					)
+					botData.Mutex.Unlock()
+					return
+				}
+
+				activeMatches := filterActiveMatches(currentSeasonMatches)
+			}
 
 			//construct the next match id of form S06-001
 			nextMatchId := currentSeasonMetadata["next_match_id"].(float64)
@@ -1395,7 +1495,6 @@ func main() {
 					})
 				}
 			case "close-signups":
-
 				//Read metadata for if league signups are open
 				metaData := botData.Metadata["current_season"].(map[string]interface{})
 				signupStatus := metaData["signups"].(bool)
@@ -1411,15 +1510,25 @@ func main() {
 					//Update the current_players metadata by counting the "active" players in season data
 					seasonPlayers := botData.Season["season_players"].(map[string]interface{})
 					activePlayers := 0
+					activeBattlers := 0
 
 					for _, player := range seasonPlayers {
 						active, _ := player.(map[string]interface{})["active"].(bool)
 						if active {
 							activePlayers++
+							role, _ := player.(map[string]interface{})["role"].(string)
+							if role == "battlers" {
+								activeBattlers++
+							}
 						}
 					}
 
 					metaData["active_players"] = activePlayers
+					metaData["battlers"] = activeBattlers
+
+					//Determine total rounds needed using log2
+					roundsNeeded := math.Ceil(math.Log2(float64(activeBattlers))) // Total Rounds Needed: Log2(#battlers) ROUNDED UP
+					metaData["total_rounds"] = float64(roundsNeeded)
 
 					//Write back to the JSON data
 					err := saveMetadata()
@@ -1701,9 +1810,7 @@ func main() {
 			switch sub {
 			case "new":
 
-				//TODO
-				// - check if current round status is "completed" (season data)
-				// - check if next round > total rounds (metdata)
+				//TODO: - Check if there is only 1 x-0 player.
 
 				//Generate pairings using current standings. Assign matchups. Assign byes. Constructs round structure to seasons.json
 
@@ -1713,6 +1820,42 @@ func main() {
 
 				//Lock bot data
 				botData.Mutex.Lock()
+
+				//Read in the season metadata to confirm we need another round
+				seasonMeta := botData.Metadata["current_season"].(map[string]interface{})
+				currentRound := seasonMeta["current_round"].(float64)
+
+				if currentRound == seasonMeta["total_rounds"] { //No need to make a new round if we are already on final round
+					s.InteractionRespond(
+						i.Interaction,
+						&discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Content: "The bot's records show that an additional round is not needed. Carry on 🍁!",
+								Flags:   discordgo.MessageFlagsEphemeral,
+							},
+						},
+					)
+					return
+				}
+
+				//Read in the round data to confirm previous round was completed
+				roundData := botData.Season["rounds"].(map[string]interface{})[fmt.Sprintf("%v", currentRound)].(map[string]interface{})
+				roundStatus := roundData["status"].(string)
+
+				if roundStatus != "completed" { // Cannot generate a new round without completing the previous round
+					s.InteractionRespond(
+						i.Interaction,
+						&discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Content: fmt.Sprintf("Round %v has not been completed in the bot's data.\nPlease use `/round close` to finalize the previous round.", currentRound),
+								Flags:   discordgo.MessageFlagsEphemeral,
+							},
+						},
+					)
+					return
+				}
 
 				//Read in the active season players and their current tournament wins
 				seasonPlayers := botData.Season["season_players"].(map[string]interface{})
@@ -1750,6 +1893,23 @@ func main() {
 				sort.Slice(roundPlayers, func(i, j int) bool {
 					return roundPlayers[i].Wins > roundPlayers[j].Wins
 				})
+
+				//Lone undefeated player check
+				//ASSUMES: more than 1 active player, and SOMEONE is undefeated. These both must be true for our league.
+				if roundPlayers[1].Losses > 0 {
+					s.InteractionRespond(
+						i.Interaction,
+						&discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Content: fmt.Sprintf("The tournament is over! <@%s> is the sole undefeated player. No need to generate a new round", roundPlayers[0].ID),
+								Flags:   discordgo.MessageFlagsEphemeral,
+							},
+						},
+					)
+					botData.Mutex.Unlock()
+					return
+				}
 
 				//Populate the playerMap of roundPlayers for quick lookup
 				for _, p := range roundPlayers {
@@ -2050,7 +2210,14 @@ func main() {
 
 			case "close":
 				//ENDs the round.
-				//How do we handle unreported matches?
+				//Requirements: ALL bounty matches be reported
+
+				//Loop through matches data, grabbing all who are not "logged" or "voided"
+
+				//Accumulate points via the following
+				// BOUNTY match -> Winner +3, Loser +1 : How do I check for repeats? Do we do so during /result? (Probably)
+				//
+
 			case "reminder":
 				//Posts reminder for unreported matchest in weekly-matches
 			}
@@ -2688,6 +2855,21 @@ func main() {
 					return
 				}
 
+				if matchData["status"] == "logged" {
+					//Match already logged and cant be edited anymore
+					s.InteractionRespond(
+						i.Interaction,
+						&discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Content: fmt.Sprintf("The round for the matchID you submitted has already been completed and the match was logged: `%v`\n\nTo revise the match data, please contact the bot organizer.", matchID),
+								Flags:   discordgo.MessageFlagsEphemeral,
+							},
+						},
+					)
+					return
+				}
+
 				if matchData["status"] == "voided" {
 					//Match already voided
 					s.InteractionRespond(
@@ -2862,6 +3044,21 @@ func main() {
 							Type: discordgo.InteractionResponseChannelMessageWithSource,
 							Data: &discordgo.InteractionResponseData{
 								Content: fmt.Sprintf("The matchID you submitted was not found: `%v`", matchID),
+								Flags:   discordgo.MessageFlagsEphemeral,
+							},
+						},
+					)
+					return
+				}
+
+				if matchData["status"] == "logged" {
+					//Match already logged and cant be edited anymore
+					s.InteractionRespond(
+						i.Interaction,
+						&discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Content: fmt.Sprintf("The round for the matchID you submitted has already been completed and the match was logged: `%v`\n\nTo delete the match data, please contact the bot organizer.", matchID),
 								Flags:   discordgo.MessageFlagsEphemeral,
 							},
 						},
