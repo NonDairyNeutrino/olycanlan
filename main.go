@@ -762,6 +762,44 @@ func main() {
 				//Check active matches (non completed or voided) for already reported bounty with this pairing
 				activeMatches := filterActiveMatches(currentSeasonMatches)
 
+				bountyReported := false
+				bountyMatchID := ""
+				bountyMsgID := ""
+
+				//Loop through active matches (small number)
+				for matchID, match := range activeMatches {
+					matchData := match.(map[string]interface{})
+
+					//If not bounty -> skip
+					if !matchData["bounty"].(bool) {
+						continue
+					}
+
+					pWin := matchData["winner"].(string)
+					pLose := matchData["loser"].(string)
+
+					//If reported match players match submitted players, set true and gather info
+					if (matchResultReport.Winner == pWin && matchResultReport.Loser == pLose) ||
+						(matchResultReport.Winner == pLose && matchResultReport.Loser == pWin) {
+						bountyReported = true
+						bountyMatchID = matchID
+						bountyMsgID = matchData["msg_id"].(string)
+						break
+					}
+				}
+
+				//If bounty reported is found, reply ephemerally and link to previous report
+				if bountyReported {
+					msgURL := fmt.Sprintf(
+						"https://discord.com/channels/%s/%s/%s",
+						i.GuildID,
+						os.Getenv("BOUNTY_CHNL_ID"),
+						bountyMsgID,
+					)
+					replyEphemeral(s, i, fmt.Sprintf("A bounty match was already submitted for this pairing: `%v`\n ➡️%s", bountyMatchID, msgURL))
+					botData.Mutex.Unlock()
+					return
+				}
 			}
 
 			//construct the next match id of form S06-001
@@ -1963,16 +2001,23 @@ func main() {
 
 			case "close":
 				//ENDs the round.
-				//Requirements: ALL bounty matches be reported
+				//Requirements: ALL bounty matches be reported. Kicks out early if its false.
 
 				//Loop through matches data, grabbing all who are not "logged" or "voided"
 
 				//Accumulate points via the following
-				// BOUNTY match -> Winner +3, Loser +1 : How do I check for repeats? Do we do so during /result? (Probably)
-				//
+				// BOUNTY match -> Winner +3, Loser +1 (INCLUDES BYE)
+				// NON-BOUNTY match -> Winner +1, Loser +0
+				// First match against unique OPP -> +3
+
+				//Set matches to LOGGED
 
 			case "reminder":
 				//Posts reminder for unreported matchest in weekly-matches
+
+				//Checks reported BOUNTY matches and applies reported -> TRUE
+
+				//Checks bounty matches that have NOT been reported (season.json -> rounds -> # -> pairings -> repoted=FALSE)
 			}
 		case "admin": // Admin commands. Edit player data and match data
 			sub := i.ApplicationCommandData().Options[0].Name
