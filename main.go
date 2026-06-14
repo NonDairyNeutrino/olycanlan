@@ -1254,20 +1254,33 @@ func main() {
 				}
 
 				//Send message in Bounty Board channel
-				msg, err := s.ChannelMessageSendComplex(
+				_, err_post := s.ChannelMessageSendComplex(
 					os.Getenv("ADMIN_CHNL_ID"),
 					&discordgo.MessageSend{
 						Content: fmt.Sprintf("<@&%v>", os.Getenv("ORGANIZER_ID")),
 						Embed:   embed,
+						Components: []discordgo.MessageComponent{
+							discordgo.ActionsRow{
+								Components: []discordgo.MessageComponent{
+									discordgo.Button{
+										Label:    "Approve",
+										Style:    discordgo.SuccessButton,
+										CustomID: "approved",
+									},
+									discordgo.Button{
+										Label:    "Reject",
+										Style:    discordgo.DangerButton,
+										CustomID: "rejected",
+									},
+								},
+							},
+						},
 					},
 				)
-				if err != nil {
+				if err_post != nil {
 					log.Printf("Error sending message in admin channel: %v", err)
 					return
 				}
-				_ = s.MessageReactionAdd(os.Getenv("ADMIN_CHNL_ID"), msg.ID, "🔍")
-				_ = s.MessageReactionAdd(os.Getenv("ADMIN_CHNL_ID"), msg.ID, "❌")
-
 				return
 			}
 		case "drop":
@@ -2004,6 +2017,60 @@ func main() {
 				//Requirements: ALL bounty matches be reported. Kicks out early if its false.
 
 				//Loop through matches data, grabbing all who are not "logged" or "voided"
+
+				//Gather data
+				botData.Mutex.Lock()
+
+				//Get active matches
+				matchesData := botData.Matches["current_season"].(map[string]interface{})
+				activeMatches := filterActiveMatches(matchesData)
+
+				//Get round data
+				currentRoundStr := fmt.Sprintf("%v", botData.Metadata["current_season"].(map[string]interface{})["current_round"].(float64))
+				roundData := botData.Season["rounds"].(map[string]interface{})[currentRoundStr].(map[string]interface{})
+				pairingsData := roundData["pairings"].([]interface{})
+				roundStatus := roundData["status"].(string)
+
+				//Logic Checks
+				//If round is not active, kick out
+				if roundStatus != "active" {
+					replyEphemeral(s, i, fmt.Sprintf("Current round (%s) is not currently active. Status:%s\n\nIf the round is completed, you can use `/round new` to generate a new round.", currentRoundStr, roundStatus))
+					botData.Mutex.Unlock()
+					return
+				}
+
+				//If all bounty matches have not been reported...
+				for _, pairing := range pairingsData {
+					p := pairing.(map[string]interface{})
+					
+					if p["bye"].(bool) {
+						continue
+					}
+
+					p1 := p["player1"].(string)
+					p2 := p["player2"].(string)
+
+					var unreportedBounty []RoundPairing
+					reported := false
+					for matchID, match := range activeMatches {
+						matchData := match.(map[string]interface{})
+
+						pWin := matchData["winner"].(string)
+						pLose := matchData["loser"].(string)
+
+						if (pWin == p1 && pLose == p2) || (pWin == p2 && pLose == p1) {
+							reported = true
+							p["match_id"] = matchID
+							p["winner"] = pWin
+							p["result"] = matchData["result"].(string)
+							break
+						}
+					}
+
+					if !reported {
+						//THIS MIGHT BE BAD? p =/= RoundPairing but it kinda is too...
+						unreportedBounty = append(unreportedBounty, p)
+					}
 
 				//Accumulate points via the following
 				// BOUNTY match -> Winner +3, Loser +1 (INCLUDES BYE)
@@ -2778,6 +2845,96 @@ func main() {
 		}
 	})
 
+	//Button press handler.
+	// CURRENTLY USED FOR: decklist review and round reminders.
+	discord.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		if i.Type != discordgo.InteractionMessageComponent {
+			return
+		}
+
+		switch i.MessageComponentData().CustomID {
+		// Decklist approval/rejection
+		case "approved", "rejected":
+			// Retrieve message data
+			msg, err := s.ChannelMessage(i.ChannelID, i.Message.ID)
+			if err != nil {
+				return
+			}
+
+			// Sanity checks
+			if len(msg.Embeds) == 0 {
+				return
+			}
+			if msg.Author.ID != s.State.User.ID {
+				return
+			}
+			if msg.Embeds[0].Title != "Decklist Review Needed" {
+				return
+			}
+			if msg.Embeds[0].Footer == nil {
+				return
+			}
+
+			embed := msg.Embeds[0]
+			playerID := embed.Footer.Text
+
+			switch i.MessageComponentData().CustomID {
+			case "approved":
+				// Update botData
+				botData.Mutex.Lock()
+				playerDecklistData := botData.Season["season_players"].(map[string]interface{})[playerID].(map[string]interface{})["decklist"].(map[string]interface{})
+				playerDecklistData["approved"] = true
+				err = saveSeason()
+				botData.Mutex.Unlock()
+				if err != nil {
+					return
+				}
+
+				// DM player
+				channel, err := s.UserChannelCreate(playerID)
+				if err == nil {
+					s.ChannelMessageSend(
+						channel.ID,
+						"Your decklist for the current season of the Olympia Canadian Highlander League has been approved. Be on the lookout for the first round pairings in the `#weekly-matches` channel!",
+					)
+				}
+
+				embed.Title = "Decklist Approved ✅"
+				embed.Color = 0x00FF00
+
+			case "rejected":
+				// DM player
+				channel, err := s.UserChannelCreate(playerID)
+				if err == nil {
+					s.ChannelMessageSend(
+						channel.ID,
+						"Your decklist for the current season of the Olympia Canadian Highlander League has been denied. Please use `/signup decklist` to resubmit, or contact an organizer.",
+					)
+				}
+
+				embed.Title = "Decklist Denied ❌"
+				embed.Color = 0xFF0000
+			}
+
+			// Update the embed and remove buttons regardless of outcome
+			embeds := []*discordgo.MessageEmbed{embed}
+			components := []discordgo.MessageComponent{}
+			s.ChannelMessageEditComplex(&discordgo.MessageEdit{
+				Channel:    i.ChannelID,
+				ID:         i.Message.ID,
+				Embeds:     &embeds,
+				Components: &components, // clears buttons
+			})
+
+			// Acknowledge the button click
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseDeferredMessageUpdate,
+			})
+		case "post_reminder":
+		}
+	})
+
+	//DEPRECATED
 	//Reaction handler. Used for decklist review, .....
 	discord.AddHandler(func(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
 
