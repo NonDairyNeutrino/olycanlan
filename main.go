@@ -383,8 +383,8 @@ var commands = []*discordgo.ApplicationCommand{
 			},
 			{
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
-				Name:        "reminder",
-				Description: "Posts a reminder for unreported matches to weekly-matches channel.",
+				Name:        "check",
+				Description: "Checks if all bounty matches have been reported. Option to posts a reminder for unreported matches to weekly-matches channel.",
 			},
 		},
 	},
@@ -1598,7 +1598,7 @@ func main() {
 					}
 
 					//Reply with a hidden message that the league is now open
-					replyEphemeral(s, i, fmt.Sprintf("Olympia Canlander Season %v is now open!\nAn announcement will be posted in <#%v>", newSeasonNum, os.Getenv("SIGNUP_CHNL_ID")))
+					replyEphemeral(s, i, fmt.Sprintf("Olympia Canlander Season %v is now open!\nAn announcement will be posted in <#%v>", newSeasonNum, os.Getenv("SEASON_CHNL_ID")))
 
 					//format a display date
 					//NOT NECESSARY BUT KEEPING FOR NOW -> location, _ := time.LoadLocation("America/Los_Angeles")
@@ -1626,7 +1626,7 @@ func main() {
 
 					//Post announcement
 					_, err_announce := s.ChannelMessageSendComplex(
-						os.Getenv("SIGNUP_CHNL_ID"),
+						os.Getenv("SEASON_CHNL_ID"),
 
 						&discordgo.MessageSend{
 							Content: "@everyone",
@@ -2065,6 +2065,7 @@ func main() {
 							p["match_id"] = matchID
 							p["winner"] = pWin
 							p["result"] = matchData["result"].(string)
+							p["reported"] = true
 							break
 						}
 					}
@@ -2100,7 +2101,7 @@ func main() {
 						&discordgo.InteractionResponse{
 							Type: discordgo.InteractionResponseChannelMessageWithSource,
 							Data: &discordgo.InteractionResponseData{
-								Content: fmt.Sprintf("Round close failed due to the below %d unreported bounty matches.\nIf you would like to post a reminder, press the `Post Reminder` button on this message", len(unreportedBounty)),
+								Content: fmt.Sprintf("Round close failed due to the below %d unreported bounty matches.\nIf you would like to post a reminder in <#%s>, press the `Post Reminder` button on this message", len(unreportedBounty), os.Getenv("MATCHES_CHNL_ID")),
 								Embeds: []*discordgo.MessageEmbed{
 									embed,
 								},
@@ -2119,7 +2120,6 @@ func main() {
 							},
 						},
 					)
-					saveSeason()
 					botData.Mutex.Unlock()
 					return
 				}
@@ -2130,14 +2130,16 @@ func main() {
 				// First match against unique OPP -> +3
 
 				//Get seasonal player data
-				playerData := botData.Season["season_players"].(map[string]interface{})
+				playersData := botData.Season["season_players"].(map[string]interface{})
 
-				for matchID, match := range activeMatches {
+				//Iterate through active matches (matches submitted this round that werent voided)
+				for _, match := range activeMatches {
 					matchData := match.(map[string]interface{})
 
 					wPoints := 0
 					lPoints := 0
 
+					//If the match was a bounty, winner gets 3 points, loser gets 1. If not, winner gets 1, loser gets 0
 					if matchData["bounty"].(bool) {
 						wPoints += 3
 						lPoints += 1
@@ -2150,12 +2152,14 @@ func main() {
 					lID := matchData["loser"].(string)
 
 					//Check if players had been opponents previously
-					wPlayerData := playerData[wID].(map[string]interface{})
-					lPlayerData := playerData[lID].(map[string]interface{})
+					wPlayerData := playersData[wID].(map[string]interface{})
+					lPlayerData := playersData[lID].(map[string]interface{})
 
+					//Fetch opponents for both players
 					wOpps := wPlayerData["opponents"].([]interface{})
 					lOpps := lPlayerData["opponents"].([]interface{})
 
+					//Logic check if they played previously (just checks winner since its symmetrical)
 					prevPlayed := false
 					for _, opp := range wOpps {
 						if opp == lID {
@@ -2164,11 +2168,12 @@ func main() {
 						}
 					}
 
+					//If not played previously, +3 points to each. And add to opp list
 					if !prevPlayed {
 						wPoints += 3
 						lPoints += 3
-						wOpps = append(wOpps, lID)
-						lOpps = append(lOpps, wID)
+						wPlayerData["opponents"] = append(wOpps, lID)
+						lPlayerData["opponents"] = append(lOpps, wID)
 					}
 
 					//Deconstruct "result"
@@ -2193,18 +2198,245 @@ func main() {
 					lStandings["game_wins"] = lStandings["game_wins"].(float64) + float64(resultL)
 					lStandings["game_losses"] = lStandings["game_losses"].(float64) + float64(resultW)
 
-					//Match match as logged
+					//Set match as logged
 					matchData["status"] = "logged"
 				}
 
-				//Set matches to LOGGED
+				//Give points and round win to bye
+				for _, pairing := range pairingsData {
+					p := pairing.(map[string]interface{})
 
-			case "reminder":
-				//Posts reminder for unreported matchest in weekly-matches
+					if !p["bye"].(bool) {
+						continue
+					}
 
-				//Checks reported BOUNTY matches and applies reported -> TRUE
+					pID := p["player1"].(string)
 
-				//Checks bounty matches that have NOT been reported (season.json -> rounds -> # -> pairings -> repoted=FALSE)
+					pData := playersData[pID].(map[string]interface{})
+					pData["received_bye"] = true
+					pStandings := pData["standings"].(map[string]interface{})
+					pStandings["wins"] = pStandings["wins"].(float64) + float64(1)
+					pStandings["points"] = pStandings["points"].(float64) + float64(3)
+
+				}
+
+				//After points are distributed:
+				//Set round to completed
+				roundData["status"] = "completed"
+
+				//Share new standings
+				//Construct Standings Table Embed
+				type StandingsEntry struct {
+					ID     string
+					Wins   int
+					Losses int
+					Points int
+				}
+
+				//Standings -> list of entries
+				var standings []StandingsEntry
+
+				for playerID, player := range playersData {
+					p := player.(map[string]interface{})
+
+					role := p["role"].(string)
+
+					if role != "battler" { // skip non-battlers
+						continue
+					}
+
+					pStandings := p["standings"].(map[string]interface{})
+
+					standings = append(standings, StandingsEntry{
+						ID:     playerID,
+						Wins:   int(pStandings["wins"].(float64)),
+						Losses: int(pStandings["losses"].(float64)),
+						Points: int(pStandings["points"].(float64)),
+					})
+				}
+
+				//Save bot data
+				err_save := saveAllData()
+				botData.Mutex.Unlock()
+				if err_save != nil {
+					log.Println("Error saving bot data during round close:", err_save)
+					return
+				}
+
+				//Sort standings
+				sort.Slice(standings, func(i, j int) bool {
+					//First sort by wins
+					if standings[i].Wins != standings[j].Wins {
+						return standings[i].Wins > standings[j].Wins
+					}
+					//Then by points
+					return standings[i].Points > standings[j].Points
+				})
+
+				// Group entries by record
+				recordGroups := make(map[string][]StandingsEntry)
+				for _, e := range standings {
+					record := fmt.Sprintf("%d-%d", e.Wins, e.Losses)
+					recordGroups[record] = append(recordGroups[record], e)
+				}
+
+				// Build fields in sorted order (entries slice is already sorted)
+				seen := make(map[string]bool)
+				var standingsFields []*discordgo.MessageEmbedField
+
+				for _, e := range standings {
+					record := fmt.Sprintf("%d-%d", e.Wins, e.Losses)
+					if seen[record] {
+						continue
+					}
+					seen[record] = true
+
+					// Build the value string for this record group
+					var sb strings.Builder
+					for _, p := range recordGroups[record] {
+						sb.WriteString(fmt.Sprintf("<@%s> | %d pts\n", p.ID, p.Points))
+					}
+
+					standingsFields = append(standingsFields, &discordgo.MessageEmbedField{
+						Name:   record,
+						Value:  sb.String(),
+						Inline: false,
+					})
+				}
+
+				//Construct embed
+				standingsEmbed := &discordgo.MessageEmbed{
+					Title:  fmt.Sprintf("🍁End of Round %s Standings🍁", currentRoundStr),
+					Color:  0xD80621, // Canadian flag red 🍁
+					Fields: standingsFields,
+				}
+
+				//Post announcement
+				_, err_announce := s.ChannelMessageSendComplex(
+					os.Getenv("SEASON_CHNL_ID"),
+
+					&discordgo.MessageSend{
+						Embeds: []*discordgo.MessageEmbed{
+							standingsEmbed,
+						},
+					},
+				)
+
+				if err_announce != nil {
+					log.Printf("Error making Standings Announcement: %v\n", err_announce)
+				}
+
+				//Make ephemeral reply
+				replyEphemeral(s, i, fmt.Sprintf("Round %s closed. A round standings announcement was made in <#%s>.\nTo begin a new round use `/round new`", currentRoundStr, os.Getenv("SEASON_CHNL_ID")))
+
+			case "check":
+				//Checks if all bounty matches have been reported. Option to posts a reminder for unreported matches to weekly-matches channel.
+
+				//Gather data
+				botData.Mutex.Lock()
+
+				//Get active matches
+				matchesData := botData.Matches["current_season"].(map[string]interface{})
+				activeMatches := filterActiveMatches(matchesData)
+
+				//Get round data
+				currentRoundStr := fmt.Sprintf("%v", botData.Metadata["current_season"].(map[string]interface{})["current_round"].(float64))
+				roundData := botData.Season["rounds"].(map[string]interface{})[currentRoundStr].(map[string]interface{})
+				pairingsData := roundData["pairings"].([]interface{})
+				roundStatus := roundData["status"].(string)
+
+				//Unlock data here since we are not writing any data
+				botData.Mutex.Unlock()
+
+				//Logic Checks
+				//If round is not active, kick out
+				if roundStatus != "active" {
+					replyEphemeral(s, i, fmt.Sprintf("Current round (%s) is not currently active. Carry on!🍁", currentRoundStr))
+					return
+				}
+
+				//Check if all bounty matches have been reported.
+				var unreportedBounty []map[string]string
+
+				for _, pairing := range pairingsData {
+					p := pairing.(map[string]interface{})
+
+					if p["bye"].(bool) {
+						continue
+					}
+
+					p1 := p["player1"].(string)
+					p2 := p["player2"].(string)
+
+					reported := false
+					for _, match := range activeMatches {
+						matchData := match.(map[string]interface{})
+
+						pWin := matchData["winner"].(string)
+						pLose := matchData["loser"].(string)
+
+						if (pWin == p1 && pLose == p2) || (pWin == p2 && pLose == p1) {
+							reported = true
+							break
+						}
+					}
+
+					//If unreported, append to unreported bounty list
+					if !reported {
+						unreportedBounty = append(unreportedBounty, map[string]string{
+							"table": fmt.Sprintf("%d", int(p["table"].(float64))),
+							"p1":    p1,
+							"p2":    p2,
+						})
+					}
+				}
+
+				//If any bounties are unreported, reply with those bounties
+				if len(unreportedBounty) != 0 {
+					var fields []*discordgo.MessageEmbedField
+
+					for _, pairing := range unreportedBounty {
+						fields = append(fields, &discordgo.MessageEmbedField{
+							Name:  fmt.Sprintf("Match %s", pairing["table"]),
+							Value: fmt.Sprintf("<@%s> vs <@%s>", pairing["p1"], pairing["p2"]),
+						})
+					}
+
+					embed := &discordgo.MessageEmbed{
+						Title:  "Unreported Bounties",
+						Fields: fields,
+					}
+
+					s.InteractionRespond(
+						i.Interaction,
+						&discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Content: fmt.Sprintf("There are %d unreported bounty matches.\nIf you would like to post a reminder in <#%s>, press the `Post Reminder` button on this message", len(unreportedBounty), os.Getenv("MATCHES_CHNL_ID")),
+								Embeds: []*discordgo.MessageEmbed{
+									embed,
+								},
+								Components: []discordgo.MessageComponent{
+									discordgo.ActionsRow{
+										Components: []discordgo.MessageComponent{
+											discordgo.Button{
+												Label:    "Post Reminder",
+												Style:    discordgo.PrimaryButton,
+												CustomID: "post_reminder",
+											},
+										},
+									},
+								},
+								Flags: discordgo.MessageFlagsEphemeral,
+							},
+						},
+					)
+					return
+				}
+
+				//Ephemeral reply if all bounty matches have been reported
+				replyEphemeral(s, i, fmt.Sprintf("All bounty matches have been reported for Round %s. You can use `/round close` at any time to complete this round and apply points.", currentRoundStr))
+
 			}
 		case "admin": // Admin commands. Edit player data and match data
 			sub := i.ApplicationCommandData().Options[0].Name

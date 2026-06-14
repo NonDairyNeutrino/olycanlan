@@ -74,12 +74,12 @@ Finished 🟩 | Developed 🟨 | Nonstarted 🟥
 
 ---
 
-#### `/round close` 🟥
+#### `/round close` 🟨
 **Description:**  Closes the currently active round. How does it handle un-reported matches?
 
 ---
 
-#### `/round reminder` 🟥
+#### `/round reminder` 🟨
 **Description:**  Publishes a reminder for all unreported/incomplete matches in the active round
 
 ---
