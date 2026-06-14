@@ -229,7 +229,7 @@ type RoundPairing struct {
 	Winner   string `json:"winner"`
 }
 
-const prefix string = "!skbot"
+//Chat handler -> const prefix string = "!skbot"
 
 // slash command global variable
 var commands = []*discordgo.ApplicationCommand{
@@ -578,7 +578,6 @@ func registerCommands(s *discordgo.Session) {
 }
 
 // Ephemeral reply function.
-// Snippet: "rEph"
 // Cleans up the code quite a bit. Does not handle embeds. ALWAYS ephemeral
 func replyEphemeral(s *discordgo.Session, i *discordgo.InteractionCreate, message string) {
 	s.InteractionRespond(
@@ -1153,6 +1152,9 @@ func main() {
 					return
 				}
 
+				//Lock bot data
+				botData.Mutex.Lock()
+
 				//Logic check if player already in season data
 				existingSeasonPlayer, exists := botData.Season["season_players"].(map[string]interface{})[i.Member.User.ID]
 
@@ -1217,9 +1219,6 @@ func main() {
 					replyEphemeral(s, i, fmt.Sprintf("The URL provided is invalid. Please resubmit `/signup decklist` with a valid URL.\n%v", url))
 					return
 				}
-
-				//Mutex Lock the botData for writing
-				botData.Mutex.Lock()
 
 				//Assign the playerDecklistData
 				playerDecklistData.(map[string]interface{})["url"] = url
@@ -1328,13 +1327,15 @@ func main() {
 				//Revise the player's data in season.json
 				//lock the data and unlock once returned/finished
 				botData.Mutex.Lock()
-				defer botData.Mutex.Unlock()
+
 				//change dropped to true and active to false
 				playerData := botData.Season["season_players"].(map[string]interface{})[i.Member.User.ID].(map[string]interface{})
 				playerData["dropped"] = true
 				playerData["active"] = false
+
 				//save the season
 				err := saveSeason()
+				botData.Mutex.Unlock()
 				if err != nil {
 					return
 				}
@@ -1415,7 +1416,7 @@ func main() {
 						if active {
 							activePlayers++
 							role, _ := player.(map[string]interface{})["role"].(string)
-							if role == "battlers" {
+							if role == "battler" {
 								activeBattlers++
 							}
 						}
@@ -1669,8 +1670,6 @@ func main() {
 			switch sub {
 			case "new":
 
-				//TODO: - Check if there is only 1 x-0 player.
-
 				//Generate pairings using current standings. Assign matchups. Assign byes. Constructs round structure to seasons.json
 
 				//Initialize a roundplayers list of RoundPlayer structs
@@ -1689,15 +1688,16 @@ func main() {
 					return
 				}
 
-				//Read in the round data to confirm previous round was completed
-				roundData := botData.Season["rounds"].(map[string]interface{})[fmt.Sprintf("%v", currentRound)].(map[string]interface{})
-				roundStatus := roundData["status"].(string)
+				//Read in the round data to confirm previous round was completed (only if not first round)
+				if currentRound > 0 {
+					roundData := botData.Season["rounds"].(map[string]interface{})[fmt.Sprintf("%v", currentRound)].(map[string]interface{})
+					roundStatus := roundData["status"].(string)
 
-				if roundStatus != "completed" { // Cannot generate a new round without completing the previous round
-					replyEphemeral(s, i, fmt.Sprintf("Round %v has not been completed in the bot's data.\nPlease use `/round close` to finalize the previous round.", currentRound))
-					return
+					if roundStatus != "completed" { // Cannot generate a new round without completing the previous round
+						replyEphemeral(s, i, fmt.Sprintf("Round %v has not been completed in the bot's data.\nPlease use `/round close` to finalize the previous round.", currentRound))
+						return
+					}
 				}
-
 				//Read in the active season players and their current tournament wins
 				seasonPlayers := botData.Season["season_players"].(map[string]interface{})
 
@@ -1856,7 +1856,11 @@ func main() {
 
 				roundsData := botData.Season["rounds"].(map[string]interface{}) // Pull rounds data
 
-				roundsData["pending"].(map[string]interface{})["pairings"] = roundPairings // apply pairings to "pending"
+				// apply pairings to "pending"
+				roundsData["pending"] = map[string]interface{}{
+					"pairings": roundPairings,
+					"status":   "pending",
+				}
 
 				err_save := saveSeason()
 				botData.Mutex.Unlock()
@@ -1910,6 +1914,9 @@ func main() {
 				)
 
 			case "post":
+
+				//TODO: - Add player to eachother's pairings
+
 				//Post in weekly-matches the current round structure
 
 				//retrieve the "pending" round
@@ -2023,7 +2030,7 @@ func main() {
 				botData.Mutex.Lock()
 
 				//Get active matches
-				matchesData := botData.Matches["current_season"].(map[string]interface{})
+				matchesData := botData.Matches["current_season"].(map[string]interface{})["matches"].(map[string]interface{})
 				activeMatches := filterActiveMatches(matchesData)
 
 				//Get round data
@@ -2336,7 +2343,7 @@ func main() {
 				botData.Mutex.Lock()
 
 				//Get active matches
-				matchesData := botData.Matches["current_season"].(map[string]interface{})
+				matchesData := botData.Matches["current_season"].(map[string]interface{})["matches"].(map[string]interface{})
 				activeMatches := filterActiveMatches(matchesData)
 
 				//Get round data
@@ -2758,13 +2765,13 @@ func main() {
 					//Revise the player's data in season.json
 					//lock the data and unlock once returned/finished
 					botData.Mutex.Lock()
-					defer botData.Mutex.Unlock()
 					//change dropped to true and active to false
 					playerData := botData.Season["season_players"].(map[string]interface{})[player.ID].(map[string]interface{})
 					playerData["dropped"] = true
 					playerData["active"] = false
 					//save the season
 					err := saveSeason()
+					botData.Mutex.Unlock()
 					if err != nil {
 						return
 					}
