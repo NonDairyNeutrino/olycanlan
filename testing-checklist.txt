@@ -1,0 +1,343 @@
+Here's an exhaustive testing checklist organized by command:
+
+---
+
+## Pre-Testing Setup
+- [ ] Bot connects to Discord successfully
+- [ ] All JSON files load without error on startup
+- [ ] All slash commands register successfully in the guild
+- [ ] `.env` file contains all required variables (`DISCORD_TOKEN`, `GUILD_ID`, `BATTLER_ID`, `JAMMER_ID`, `ORGANIZER_ID`, `INACTIVE_ID`, `BOUNTY_CHNL_ID`, `MATCHES_CHNL_ID`, `ADMIN_CHNL_ID`, `SEASON_CHNL_ID`)
+
+---
+
+## `/signup battler`
+- [ ] User with no roles signs up successfully — receives Battler role
+- [ ] User with no roles signs up — season.json creates fresh player entry with correct default values
+- [ ] User with no roles signs up — players.json creates fresh historical entry with correct default values
+- [ ] User with no roles signs up — receives ephemeral confirmation message
+- [ ] User already a Battler signs up — receives "already signed up" ephemeral, no data changed
+- [ ] User who is a Jammer signs up as Battler — Jammer role removed, Battler role added
+- [ ] User who is a Jammer signs up as Battler — season.json role updated to "battler"
+- [ ] User who previously existed in season.json signs up — data updated, not duplicated
+- [ ] User who previously existed in players.json signs up — nickname updated, not duplicated
+- [ ] Signups closed — user receives "signups closed" ephemeral, no data changed
+- [ ] User signs up — nickname used if set, username used if no nickname
+
+---
+
+## `/signup jammer`
+- [ ] User with no roles signs up successfully — receives Jammer role
+- [ ] User with no roles signs up — season.json creates fresh player entry
+- [ ] User with no roles signs up — players.json creates fresh historical entry
+- [ ] User with no roles signs up — receives ephemeral confirmation message
+- [ ] User already a Jammer signs up — receives "already signed up" ephemeral, no data changed
+- [ ] User who is a Battler signs up as Jammer — Battler role removed, Jammer role added
+- [ ] User who is a Jammer signs up as Jammer — season.json role updated to "jammer"
+- [ ] User who previously existed in season.json signs up — data updated, not duplicated
+- [ ] User who previously existed in players.json signs up — nickname updated, not duplicated
+- [ ] User signs up — nickname used if set, username used if no nickname
+
+---
+
+## `/signup decklist`
+- [ ] Non-Battler runs command — receives "Battlers only" ephemeral
+- [ ] Battler with no season data runs command — receives error ephemeral, admin channel notified
+- [ ] Signups closed and no decklist submitted — receives "signups closed, no decklist" ephemeral
+- [ ] Signups closed and decklist already submitted — receives "signups closed, use original" ephemeral with URL
+- [ ] Valid URL submitted — season.json decklist updated with URL and name
+- [ ] Valid URL submitted without `https://` prefix — URL normalized correctly
+- [ ] Invalid URL submitted — receives "invalid URL" ephemeral, no data changed
+- [ ] Valid submission — admin channel receives decklist review embed with Approve/Reject buttons
+- [ ] Valid submission — admin channel embed footer contains correct player ID
+- [ ] Valid submission — user receives confirmation ephemeral with deck name and URL
+- [ ] Deck name omitted — submission succeeds with empty name
+- [ ] Player resubmits decklist — old decklist overwritten, not duplicated
+
+---
+
+## Decklist Review Buttons (`approved` / `rejected`)
+- [ ] Approve button clicked — `season.json` decklist `approved` set to `true`
+- [ ] Approve button clicked — player receives DM confirmation
+- [ ] Approve button clicked — embed title changes to "Decklist Approved ✅"
+- [ ] Approve button clicked — embed color changes to green
+- [ ] Approve button clicked — buttons removed from message
+- [ ] Reject button clicked — player receives DM denial message
+- [ ] Reject button clicked — embed title changes to "Decklist Denied ❌"
+- [ ] Reject button clicked — embed color changes to red
+- [ ] Reject button clicked — buttons removed from message
+- [ ] Reject button clicked — season.json `approved` remains `false`
+- [ ] Button clicked on non-bot message — silently ignored
+- [ ] Button clicked on embed with wrong title — silently ignored
+- [ ] Button clicked on embed with no footer — silently ignored
+
+---
+
+## `/drop`
+- [ ] Non-participant runs command — receives "already not active" ephemeral
+- [ ] Battler drops — Battler role removed
+- [ ] Battler drops — Inactive role added
+- [ ] Battler drops — season.json `dropped` set to `true`, `active` set to `false`
+- [ ] Battler drops — receives ephemeral confirmation
+- [ ] Battler drops — admin channel notified with player mention and role
+- [ ] Jammer drops — Jammer role removed
+- [ ] Jammer drops — Inactive role added
+- [ ] Jammer drops — season.json updated correctly
+- [ ] Drop with reason provided — reason appears in admin channel message
+- [ ] Drop with no reason — "No Reason Provided" appears in admin channel message
+
+---
+
+## `/league open-signups`
+- [ ] Non-organizer runs command — receives "admins only" ephemeral
+- [ ] Organizer opens signups when already open — receives "already open" ephemeral
+- [ ] Organizer opens signups when closed — `metadata.json` `signups` set to `true`
+- [ ] Organizer opens signups — receives confirmation ephemeral
+
+---
+
+## `/league close-signups`
+- [ ] Non-organizer runs command — receives "admins only" ephemeral
+- [ ] Organizer closes signups when already closed — receives "already closed" ephemeral
+- [ ] Organizer closes signups — `metadata.json` `signups` set to `false`
+- [ ] Organizer closes signups — `active_players` count correct in metadata
+- [ ] Organizer closes signups — `battlers` count correct in metadata (verify typo fix)
+- [ ] Organizer closes signups — `total_rounds` calculated correctly via `log2(battlers)` rounded up
+- [ ] Organizer closes signups — receives confirmation ephemeral
+- [ ] Edge case: 0 battlers — verify `log2(0)` is handled gracefully
+
+---
+
+## `/league new-season`
+- [ ] Non-organizer runs command — receives "admins only" ephemeral
+- [ ] Signups currently open — receives "league already open" ephemeral, no data changed
+- [ ] Invalid date format submitted — receives date format error ephemeral, no data changed
+- [ ] Valid date submitted — `metadata.json` `start_date` updated correctly
+- [ ] Valid date submitted — `metadata.json` `signups` set to `true`
+- [ ] Valid date submitted — season number incremented correctly
+- [ ] Valid date submitted — `current_round` reset to `0`
+- [ ] Valid date submitted — current matches archived to `archive.matches` in `matches.json`
+- [ ] Valid date submitted — archived matches have status set to `"archived"`
+- [ ] Valid date submitted — `matches.json` current season matches cleared
+- [ ] Valid date submitted — `next_match_id` reset to `1`
+- [ ] Valid date submitted — each player's historical record updated from season standings
+- [ ] Valid date submitted — `last_decklist` updated for battlers only
+- [ ] Valid date submitted — `seasons_played` list updated for each player
+- [ ] Valid date submitted — old `season.json` archived to `site/data/archive/season-X.json`
+- [ ] Valid date submitted — `season.json` reset to empty rounds and season_players
+- [ ] Valid date submitted — all JSON files saved correctly
+- [ ] Valid date submitted — receives confirmation ephemeral
+- [ ] Valid date submitted — season opening announcement posted in `SEASON_CHNL_ID`
+- [ ] Valid date submitted — announcement pings `@everyone`
+- [ ] Player exists in season.json but not players.json — handled gracefully (verify fix)
+
+---
+
+## `/round new`
+- [ ] Non-organizer runs command — receives "admins only" ephemeral
+- [ ] `current_round` equals `total_rounds` — receives "no additional round needed" ephemeral
+- [ ] First round (`current_round == 0`) — skips previous round completion check (verify fix)
+- [ ] Previous round not completed — receives "complete previous round first" ephemeral
+- [ ] Only 1 active player remains — handled gracefully without panic (verify fix)
+- [ ] Lone undefeated player exists — receives tournament over ephemeral with winner mention
+- [ ] Even number of players — no bye generated
+- [ ] Odd number of players — bye generated for one player
+- [ ] Bye assigned to player who hasn't received bye yet
+- [ ] Player who already received bye is not assigned bye again
+- [ ] No rematches in generated pairings
+- [ ] Players sorted by wins descending before pairing
+- [ ] Players within same win bracket shuffled randomly
+- [ ] Valid pairings found within 50 attempts — saved to `rounds.pending` in season.json
+- [ ] Valid pairings found — admin receives ephemeral embed showing all pairings with records
+- [ ] Pairings generation fails after 50 attempts — admin notified, no data saved
+- [ ] `rounds.pending` correctly structured with pairings and status
+
+---
+
+## `/round post`
+- [ ] Non-organizer runs command — receives "admins only" ephemeral
+- [ ] No pending round exists — receives "no pending round" ephemeral
+- [ ] Pending round exists — `current_round` incremented in metadata
+- [ ] Pending round exists — round moved from `pending` to numbered key in `rounds`
+- [ ] Pending round exists — round status set to `"active"`
+- [ ] Pending round exists — `pending` set to `nil` in season.json
+- [ ] Pending round exists — season.json saved before unlock
+- [ ] Pairings embed posted to `MATCHES_CHNL_ID` with correct round number
+- [ ] Pairings embed shows correct player mentions, wins, and losses
+- [ ] Bye shown correctly in embed
+- [ ] Announcement pings `@everyone`
+- [ ] Admin receives ephemeral confirmation with channel link
+
+---
+
+## `/round check`
+- [ ] Non-organizer runs command — receives "admins only" ephemeral
+- [ ] Round not active — receives "round not active" ephemeral
+- [ ] All matches reported — receives "all reported" ephemeral with round close instructions
+- [ ] Unreported matches exist — receives ephemeral embed listing unreported matches by table
+- [ ] Unreported matches exist — "Post Reminder" button present on ephemeral
+- [ ] Post Reminder button clicked — reminder posted to `MATCHES_CHNL_ID`
+- [ ] Post Reminder button clicked — embed title updated to "Unreported Bounty Reminder"
+- [ ] Post Reminder button clicked — admin receives confirmation ephemeral
+
+---
+
+## `/round close`
+- [ ] Non-organizer runs command — receives "admins only" ephemeral
+- [ ] Round not active — receives "round not active" ephemeral
+- [ ] Unreported matches exist — receives ephemeral embed listing unreported matches
+- [ ] Unreported matches exist — "Post Reminder" button present
+- [ ] Unreported matches exist — no data modified, no save triggered
+- [ ] All matches reported — pairing data updated with `match_id`, `winner`, `result`, `reported: true`
+- [ ] Bounty match winner gets 3 points
+- [ ] Bounty match loser gets 1 point
+- [ ] Non-bounty match winner gets 1 point
+- [ ] Non-bounty match loser gets 0 points
+- [ ] First time two players face each other — both get +3 points
+- [ ] Players who have faced each other before — no +3 bonus
+- [ ] First-time opponents — both added to each other's `opponents` list
+- [ ] Repeat opponents — `opponents` list unchanged
+- [ ] Winner `wins` incremented by 1
+- [ ] Loser `losses` incremented by 1
+- [ ] Winner `game_wins` and `game_losses` updated correctly from result string
+- [ ] Loser `game_wins` and `game_losses` updated correctly (reversed from winner)
+- [ ] Concession result (`0-0`) — game wins/losses both 0
+- [ ] Bye player — `wins` incremented by 1
+- [ ] Bye player — `points` incremented by 3
+- [ ] Bye player — `received_bye` set to `true`
+- [ ] Match status set to `"logged"` for all processed matches
+- [ ] Round status set to `"completed"`
+- [ ] Player `pairings` list updated with new opponent (verify fix is in place)
+- [ ] All data saved before unlock
+- [ ] Standings embed posted to `SEASON_CHNL_ID`
+- [ ] Standings grouped by record (e.g. `4-0`, `3-1`)
+- [ ] Within each record group, players sorted by points descending
+- [ ] Jammers excluded from standings embed
+- [ ] Admin receives ephemeral confirmation with channel link
+
+---
+
+## `/result`
+- [ ] Non-participant (no Battler or Jammer role) runs command — receives "league members only" ephemeral
+- [ ] Round not active — receives "no active round" ephemeral
+- [ ] Non-bounty match submitted — saved to `matches.json` with correct data
+- [ ] Non-bounty match submitted — `next_match_id` incremented
+- [ ] Non-bounty match submitted — announcement embed posted to `BOUNTY_CHNL_ID`
+- [ ] Non-bounty match submitted — `msg_id` saved back to `matches.json`
+- [ ] Non-bounty match submitted — user receives ephemeral with link to announcement
+- [ ] Bounty match submitted — pairing checked against current round pairings
+- [ ] Bounty match submitted with no matching pairing — receives "no bounty found" ephemeral, no data saved
+- [ ] Bounty match submitted with valid pairing — proceeds to duplicate check
+- [ ] Bounty already reported for this pairing — receives ephemeral with link to original report
+- [ ] Bounty not yet reported — saved successfully
+- [ ] Winner and loser order flipped in submission vs pairing — still correctly identified as bounty
+- [ ] Match saved with correct `winner`, `loser`, `result`, `bounty`, `status: "active"`
+- [ ] Match ID format correct (e.g. `S08-001`)
+- [ ] `matches.json` saved successfully after recording
+
+---
+
+## `/admin player-signup`
+- [ ] Non-organizer runs command — receives "admins only" ephemeral
+- [ ] Sign up as battler — signups closed — receives "signups closed" ephemeral
+- [ ] Sign up as battler — player already a battler — receives "already signed up" ephemeral
+- [ ] Sign up as battler — player is jammer — jammer role removed, battler role added
+- [ ] Sign up as battler — new player — season.json and players.json entries created correctly
+- [ ] Sign up as battler — existing player — data updated not duplicated
+- [ ] Sign up as battler — admin receives confirmation ephemeral
+- [ ] Sign up as jammer — player already a jammer — receives "already signed up" ephemeral
+- [ ] Sign up as jammer — player is battler — battler role removed, jammer role added
+- [ ] Sign up as jammer — new player — season.json and players.json entries created correctly
+- [ ] Sign up as jammer — existing player — data updated not duplicated
+- [ ] Sign up as jammer — admin receives confirmation ephemeral
+
+---
+
+## `/admin player-drop`
+- [ ] Non-organizer runs command — receives "admins only" ephemeral
+- [ ] Player not an active participant — receives "already not active" ephemeral
+- [ ] Battler dropped — Battler role removed, Inactive role added
+- [ ] Battler dropped — season.json `dropped: true`, `active: false`
+- [ ] Battler dropped — admin receives confirmation ephemeral
+- [ ] Battler dropped — admin channel notified
+- [ ] Jammer dropped — Jammer role removed, Inactive role added
+- [ ] Jammer dropped — season.json updated correctly
+- [ ] Verify `defer` replaced with explicit unlock (no deadlock)
+
+---
+
+## `/admin player-points`
+- [ ] Non-organizer runs command — receives "admins only" ephemeral
+- [ ] Player not in season data — receives "no data found" ephemeral
+- [ ] Add points — points increased correctly
+- [ ] Subtract points — points decreased correctly
+- [ ] Subtract more points than player has — points floored at 0
+- [ ] Set points — points set to exact value
+- [ ] Set negative points — points floored at 0
+- [ ] Points saved to season.json correctly
+- [ ] Admin receives confirmation ephemeral with old and new values
+- [ ] Admin channel receives adjustment notification
+
+---
+
+## `/admin player-info`
+- [ ] Non-organizer runs command — receives "admins only" ephemeral
+- [ ] Player with no season data — season section shows "no data" message
+- [ ] Player with no historical data — historical section shows "no data" message
+- [ ] Player with both — all fields populated correctly
+- [ ] Battler — decklist shown as linked name
+- [ ] Jammer — decklist shown as "N/A"
+- [ ] Opponents list formatted as mentions
+- [ ] Empty opponents list — no crash
+- [ ] Seasons played list formatted correctly
+- [ ] Empty seasons played — no crash
+- [ ] Embed received as ephemeral reply
+- [ ] Typo fix confirmed: "HISTORICAL DATA" not "HISORICAL DATA"
+
+---
+
+## `/admin match-edit`
+- [ ] Non-organizer runs command — receives "admins only" ephemeral
+- [ ] Invalid match ID — receives "not found" ephemeral
+- [ ] Match already logged — receives "already logged" ephemeral
+- [ ] Match already voided — receives "already voided" ephemeral
+- [ ] No fields changed — receives "no changes detected" ephemeral
+- [ ] Winner equals loser — receives "winner and loser cannot match" ephemeral
+- [ ] Winner changed only — loser unchanged, data updated correctly
+- [ ] Loser changed only — winner unchanged, data updated correctly
+- [ ] Result changed only — winner/loser unchanged, data updated correctly
+- [ ] Bounty changed only — other fields unchanged, data updated correctly
+- [ ] Multiple fields changed — all updated correctly
+- [ ] Match status set to `"edited"` after change
+- [ ] Original announcement embed updated in `BOUNTY_CHNL_ID`
+- [ ] Updated embed shows correct new data and "Edited" in title
+- [ ] Admin receives confirmation ephemeral with old and new values and message link
+- [ ] `matches.json` saved correctly
+
+---
+
+## `/admin match-delete`
+- [ ] Non-organizer runs command — receives "admins only" ephemeral
+- [ ] Invalid match ID — receives "not found" ephemeral
+- [ ] Match already logged — receives "already logged" ephemeral
+- [ ] Valid match — status set to `"voided"` in matches.json
+- [ ] Valid match — original announcement embed edited to "Match Voided" in `BOUNTY_CHNL_ID`
+- [ ] Valid match — admin receives confirmation ephemeral with message link
+- [ ] `matches.json` saved correctly
+
+---
+
+## Concurrency & Data Integrity
+- [ ] Two users submit `/result` simultaneously — no data corruption
+- [ ] Admin runs `/round close` while player submits `/result` — no deadlock or panic
+- [ ] Bot shutdown mid-command — data saved at shutdown is consistent
+- [ ] Bot restarted after partial operation — JSON loads correctly and bot resumes normally
+
+---
+
+## Full Season Flow (End-to-End)
+- [ ] Open signups → players sign up → close signups → total_rounds calculated correctly
+- [ ] All battlers submit decklists → all approved
+- [ ] Round 1 generated → posted → matches reported → round closed → standings posted
+- [ ] Repeat for all rounds
+- [ ] Final round closed → lone undefeated player detected on next `/round new`
+- [ ] New season started → all data archived → fresh season begins
