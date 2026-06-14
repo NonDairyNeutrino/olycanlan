@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -2040,9 +2041,11 @@ func main() {
 				}
 
 				//If all bounty matches have not been reported...
+				var unreportedBounty []map[string]string
+
 				for _, pairing := range pairingsData {
 					p := pairing.(map[string]interface{})
-					
+
 					if p["bye"].(bool) {
 						continue
 					}
@@ -2050,7 +2053,6 @@ func main() {
 					p1 := p["player1"].(string)
 					p2 := p["player2"].(string)
 
-					var unreportedBounty []RoundPairing
 					reported := false
 					for matchID, match := range activeMatches {
 						matchData := match.(map[string]interface{})
@@ -2067,15 +2069,133 @@ func main() {
 						}
 					}
 
+					//If unreported, append to unreported bounty list
 					if !reported {
-						//THIS MIGHT BE BAD? p =/= RoundPairing but it kinda is too...
-						unreportedBounty = append(unreportedBounty, p)
+						unreportedBounty = append(unreportedBounty, map[string]string{
+							"table": fmt.Sprintf("%d", int(p["table"].(float64))),
+							"p1":    p1,
+							"p2":    p2,
+						})
 					}
+				}
+
+				//If any bounties are unreported, reply with those bounties
+				if len(unreportedBounty) != 0 {
+					var fields []*discordgo.MessageEmbedField
+
+					for _, pairing := range unreportedBounty {
+						fields = append(fields, &discordgo.MessageEmbedField{
+							Name:  fmt.Sprintf("Match %s", pairing["table"]),
+							Value: fmt.Sprintf("<@%s> vs <@%s>", pairing["p1"], pairing["p2"]),
+						})
+					}
+
+					embed := &discordgo.MessageEmbed{
+						Title:  "Unreported Bounties",
+						Fields: fields,
+					}
+
+					s.InteractionRespond(
+						i.Interaction,
+						&discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Content: fmt.Sprintf("Round close failed due to the below %d unreported bounty matches.\nIf you would like to post a reminder, press the `Post Reminder` button on this message", len(unreportedBounty)),
+								Embeds: []*discordgo.MessageEmbed{
+									embed,
+								},
+								Components: []discordgo.MessageComponent{
+									discordgo.ActionsRow{
+										Components: []discordgo.MessageComponent{
+											discordgo.Button{
+												Label:    "Post Reminder",
+												Style:    discordgo.PrimaryButton,
+												CustomID: "post_reminder",
+											},
+										},
+									},
+								},
+								Flags: discordgo.MessageFlagsEphemeral,
+							},
+						},
+					)
+					saveSeason()
+					botData.Mutex.Unlock()
+					return
+				}
 
 				//Accumulate points via the following
 				// BOUNTY match -> Winner +3, Loser +1 (INCLUDES BYE)
 				// NON-BOUNTY match -> Winner +1, Loser +0
 				// First match against unique OPP -> +3
+
+				//Get seasonal player data
+				playerData := botData.Season["season_players"].(map[string]interface{})
+
+				for matchID, match := range activeMatches {
+					matchData := match.(map[string]interface{})
+
+					wPoints := 0
+					lPoints := 0
+
+					if matchData["bounty"].(bool) {
+						wPoints += 3
+						lPoints += 1
+					} else {
+						wPoints += 1
+					}
+
+					//Get player IDs
+					wID := matchData["winner"].(string)
+					lID := matchData["loser"].(string)
+
+					//Check if players had been opponents previously
+					wPlayerData := playerData[wID].(map[string]interface{})
+					lPlayerData := playerData[lID].(map[string]interface{})
+
+					wOpps := wPlayerData["opponents"].([]interface{})
+					lOpps := lPlayerData["opponents"].([]interface{})
+
+					prevPlayed := false
+					for _, opp := range wOpps {
+						if opp == lID {
+							prevPlayed = true
+							break
+						}
+					}
+
+					if !prevPlayed {
+						wPoints += 3
+						lPoints += 3
+						wOpps = append(wOpps, lID)
+						lOpps = append(lOpps, wID)
+					}
+
+					//Deconstruct "result"
+					result := matchData["result"].(string)
+					resultSplit := strings.Split(result, "-")
+					resultW, _ := strconv.Atoi(resultSplit[0])
+					resultL, _ := strconv.Atoi(resultSplit[1])
+
+					//Get seasonal standings data for winner and loser
+					wStandings := wPlayerData["standings"].(map[string]interface{})
+					lStandings := lPlayerData["standings"].(map[string]interface{})
+
+					//Apply changes to winner's standings data
+					wStandings["points"] = wStandings["points"].(float64) + float64(wPoints)
+					wStandings["wins"] = wStandings["wins"].(float64) + float64(1)
+					wStandings["game_wins"] = wStandings["game_wins"].(float64) + float64(resultW)
+					wStandings["game_losses"] = wStandings["game_losses"].(float64) + float64(resultL)
+
+					//Apply changes to loser's standings data
+					lStandings["points"] = lStandings["points"].(float64) + float64(lPoints)
+					lStandings["losses"] = lStandings["losses"].(float64) + float64(1)
+					lStandings["game_wins"] = lStandings["game_wins"].(float64) + float64(resultL)
+					lStandings["game_losses"] = lStandings["game_losses"].(float64) + float64(resultW)
+
+					//Match match as logged
+					matchData["status"] = "logged"
+				}
 
 				//Set matches to LOGGED
 
@@ -2931,6 +3051,27 @@ func main() {
 				Type: discordgo.InteractionResponseDeferredMessageUpdate,
 			})
 		case "post_reminder":
+			msg, err := s.ChannelMessage(i.ChannelID, i.Message.ID)
+
+			// Sanity checks
+			if err != nil {
+				return
+			}
+			if len(msg.Embeds) == 0 {
+				return
+			}
+
+			embed := msg.Embeds[0]
+			embed.Title = "Unreported Bounty Reminder"
+
+			s.ChannelMessageSendComplex(
+				os.Getenv("MATCHES_CHNL_ID"),
+				&discordgo.MessageSend{
+					Content: "**BOUNTY MATCH REMINDER**\n\nThe following bounties have not been reported for the current league round. If the match has already been completed, please use the `/result` command to report the match.",
+					Embeds:  []*discordgo.MessageEmbed{embed},
+				},
+			)
+			replyEphemeral(s, i, fmt.Sprintf("Reminder posted in <#%v>", os.Getenv("MATCHES_CHNL_ID")))
 		}
 	})
 
