@@ -19,6 +19,9 @@
 {{ range $playerID, $player := $players }}
     {{ $entry := dict "id" $playerID "player" $player "wins" $player.standings.wins "points" $player.standings.points }}
     {{ $sorted = $sorted | append $entry }}
+{{ if eq $player.role "battler" }}
+    {{ $entry := dict ... }}
+    {{ $sorted = $sorted | append $entry }}    
 {{ end }}
 
 {{ $sorted = sort $sorted "points" "desc" }}
