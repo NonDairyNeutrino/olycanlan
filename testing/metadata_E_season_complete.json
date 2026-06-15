@@ -1,0 +1,11 @@
+{
+    "current_season": {
+        "season": 8,
+        "signups": false,
+        "start_date": "2025-09-01T00:00:00Z",
+        "current_round": 5,
+        "total_rounds": 5,
+        "active_players": 20,
+        "battlers": 16
+    }
+}

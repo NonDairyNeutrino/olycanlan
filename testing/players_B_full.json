@@ -1,0 +1,127 @@
+{
+    "metadata": {
+        "last_updated": "2025-09-01T00:00:00Z"
+    },
+    "players": {
+        "1001": {
+            "discord_nickname": "Alpha",
+            "historical_record": { "wins": 12, "losses": 4, "game_wins": 28, "game_losses": 10 },
+            "last_decklist": { "name": "Mono Red Aggro", "url": "https://moxfield.com/decks/001" },
+            "seasons_played": [6, 7]
+        },
+        "1002": {
+            "discord_nickname": "Bravo",
+            "historical_record": { "wins": 8, "losses": 8, "game_wins": 20, "game_losses": 20 },
+            "last_decklist": { "name": "UW Control", "url": "https://moxfield.com/decks/002" },
+            "seasons_played": [7]
+        },
+        "1003": {
+            "discord_nickname": "Charlie",
+            "historical_record": { "wins": 10, "losses": 6, "game_wins": 24, "game_losses": 14 },
+            "last_decklist": { "name": "BG Midrange", "url": "https://moxfield.com/decks/003" },
+            "seasons_played": [6, 7]
+        },
+        "1004": {
+            "discord_nickname": "Delta",
+            "historical_record": { "wins": 6, "losses": 10, "game_wins": 16, "game_losses": 24 },
+            "last_decklist": { "name": "RG Ramp", "url": "https://moxfield.com/decks/004" },
+            "seasons_played": [7]
+        },
+        "1005": {
+            "discord_nickname": "Echo",
+            "historical_record": { "wins": 14, "losses": 2, "game_wins": 32, "game_losses": 6 },
+            "last_decklist": { "name": "Combo Elves", "url": "https://moxfield.com/decks/005" },
+            "seasons_played": [6, 7]
+        },
+        "1006": {
+            "discord_nickname": "Foxtrot",
+            "historical_record": { "wins": 9, "losses": 7, "game_wins": 22, "game_losses": 18 },
+            "last_decklist": { "name": "Esper Reanimator", "url": "https://moxfield.com/decks/006" },
+            "seasons_played": [7]
+        },
+        "1007": {
+            "discord_nickname": "Golf",
+            "historical_record": { "wins": 11, "losses": 5, "game_wins": 26, "game_losses": 12 },
+            "last_decklist": { "name": "Temur Tempo", "url": "https://moxfield.com/decks/007" },
+            "seasons_played": [6, 7]
+        },
+        "1008": {
+            "discord_nickname": "Hotel",
+            "historical_record": { "wins": 7, "losses": 9, "game_wins": 18, "game_losses": 22 },
+            "last_decklist": { "name": "Grixis Control", "url": "https://moxfield.com/decks/008" },
+            "seasons_played": [7]
+        },
+        "1009": {
+            "discord_nickname": "India",
+            "historical_record": { "wins": 13, "losses": 3, "game_wins": 30, "game_losses": 8 },
+            "last_decklist": { "name": "Naya Aggro", "url": "https://moxfield.com/decks/009" },
+            "seasons_played": [6, 7]
+        },
+        "1010": {
+            "discord_nickname": "Juliet",
+            "historical_record": { "wins": 5, "losses": 11, "game_wins": 14, "game_losses": 26 },
+            "last_decklist": { "name": "Dimir Ninja", "url": "https://moxfield.com/decks/010" },
+            "seasons_played": [7]
+        },
+        "1011": {
+            "discord_nickname": "Kilo",
+            "historical_record": { "wins": 10, "losses": 6, "game_wins": 24, "game_losses": 14 },
+            "last_decklist": { "name": "Abzan Midrange", "url": "https://moxfield.com/decks/011" },
+            "seasons_played": [6, 7]
+        },
+        "1012": {
+            "discord_nickname": "Lima",
+            "historical_record": { "wins": 8, "losses": 8, "game_wins": 20, "game_losses": 20 },
+            "last_decklist": { "name": "Mardu Burn", "url": "https://moxfield.com/decks/012" },
+            "seasons_played": [7]
+        },
+        "1013": {
+            "discord_nickname": "Mike",
+            "historical_record": { "wins": 6, "losses": 10, "game_wins": 16, "game_losses": 24 },
+            "last_decklist": { "name": "Sultai Value", "url": "https://moxfield.com/decks/013" },
+            "seasons_played": [6, 7]
+        },
+        "1014": {
+            "discord_nickname": "November",
+            "historical_record": { "wins": 12, "losses": 4, "game_wins": 28, "game_losses": 10 },
+            "last_decklist": { "name": "Bant Blink", "url": "https://moxfield.com/decks/014" },
+            "seasons_played": [7]
+        },
+        "1015": {
+            "discord_nickname": "Oscar",
+            "historical_record": { "wins": 9, "losses": 7, "game_wins": 22, "game_losses": 18 },
+            "last_decklist": { "name": "Izzet Spells", "url": "https://moxfield.com/decks/015" },
+            "seasons_played": [6, 7]
+        },
+        "1016": {
+            "discord_nickname": "Papa",
+            "historical_record": { "wins": 7, "losses": 9, "game_wins": 18, "game_losses": 22 },
+            "last_decklist": { "name": "Rakdos Sacrifice", "url": "https://moxfield.com/decks/016" },
+            "seasons_played": [7]
+        },
+        "1017": {
+            "discord_nickname": "Quebec",
+            "historical_record": { "wins": 0, "losses": 0, "game_wins": 0, "game_losses": 0 },
+            "last_decklist": { "name": "", "url": "" },
+            "seasons_played": []
+        },
+        "1018": {
+            "discord_nickname": "Romeo",
+            "historical_record": { "wins": 0, "losses": 0, "game_wins": 0, "game_losses": 0 },
+            "last_decklist": { "name": "", "url": "" },
+            "seasons_played": []
+        },
+        "1019": {
+            "discord_nickname": "Sierra",
+            "historical_record": { "wins": 0, "losses": 0, "game_wins": 0, "game_losses": 0 },
+            "last_decklist": { "name": "", "url": "" },
+            "seasons_played": []
+        },
+        "1020": {
+            "discord_nickname": "Tango",
+            "historical_record": { "wins": 0, "losses": 0, "game_wins": 0, "game_losses": 0 },
+            "last_decklist": { "name": "", "url": "" },
+            "seasons_played": []
+        }
+    }
+}

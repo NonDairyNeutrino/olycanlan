@@ -1,0 +1,207 @@
+{
+    "rounds": {
+        "pending": {}
+    },
+    "season_players": {
+        "1001": {
+            "active": true,
+            "decklist": { "name": "Mono Red Aggro", "url": "https://moxfield.com/decks/001", "approved": true },
+            "dropped": false,
+            "pairings": [],
+            "opponents": [],
+            "received_bye": false,
+            "role": "battler",
+            "standings": { "points": 0, "wins": 0, "losses": 0, "game_wins": 0, "game_losses": 0 }
+        },
+        "1002": {
+            "active": true,
+            "decklist": { "name": "UW Control", "url": "https://moxfield.com/decks/002", "approved": true },
+            "dropped": false,
+            "pairings": [],
+            "opponents": [],
+            "received_bye": false,
+            "role": "battler",
+            "standings": { "points": 0, "wins": 0, "losses": 0, "game_wins": 0, "game_losses": 0 }
+        },
+        "1003": {
+            "active": true,
+            "decklist": { "name": "BG Midrange", "url": "https://moxfield.com/decks/003", "approved": true },
+            "dropped": false,
+            "pairings": [],
+            "opponents": [],
+            "received_bye": false,
+            "role": "battler",
+            "standings": { "points": 0, "wins": 0, "losses": 0, "game_wins": 0, "game_losses": 0 }
+        },
+        "1004": {
+            "active": true,
+            "decklist": { "name": "RG Ramp", "url": "https://moxfield.com/decks/004", "approved": true },
+            "dropped": false,
+            "pairings": [],
+            "opponents": [],
+            "received_bye": false,
+            "role": "battler",
+            "standings": { "points": 0, "wins": 0, "losses": 0, "game_wins": 0, "game_losses": 0 }
+        },
+        "1005": {
+            "active": true,
+            "decklist": { "name": "Combo Elves", "url": "https://moxfield.com/decks/005", "approved": true },
+            "dropped": false,
+            "pairings": [],
+            "opponents": [],
+            "received_bye": false,
+            "role": "battler",
+            "standings": { "points": 0, "wins": 0, "losses": 0, "game_wins": 0, "game_losses": 0 }
+        },
+        "1006": {
+            "active": true,
+            "decklist": { "name": "Esper Reanimator", "url": "https://moxfield.com/decks/006", "approved": true },
+            "dropped": false,
+            "pairings": [],
+            "opponents": [],
+            "received_bye": false,
+            "role": "battler",
+            "standings": { "points": 0, "wins": 0, "losses": 0, "game_wins": 0, "game_losses": 0 }
+        },
+        "1007": {
+            "active": true,
+            "decklist": { "name": "Temur Tempo", "url": "https://moxfield.com/decks/007", "approved": true },
+            "dropped": false,
+            "pairings": [],
+            "opponents": [],
+            "received_bye": false,
+            "role": "battler",
+            "standings": { "points": 0, "wins": 0, "losses": 0, "game_wins": 0, "game_losses": 0 }
+        },
+        "1008": {
+            "active": true,
+            "decklist": { "name": "Grixis Control", "url": "https://moxfield.com/decks/008", "approved": true },
+            "dropped": false,
+            "pairings": [],
+            "opponents": [],
+            "received_bye": false,
+            "role": "battler",
+            "standings": { "points": 0, "wins": 0, "losses": 0, "game_wins": 0, "game_losses": 0 }
+        },
+        "1009": {
+            "active": true,
+            "decklist": { "name": "Naya Aggro", "url": "https://moxfield.com/decks/009", "approved": true },
+            "dropped": false,
+            "pairings": [],
+            "opponents": [],
+            "received_bye": false,
+            "role": "battler",
+            "standings": { "points": 0, "wins": 0, "losses": 0, "game_wins": 0, "game_losses": 0 }
+        },
+        "1010": {
+            "active": true,
+            "decklist": { "name": "Dimir Ninja", "url": "https://moxfield.com/decks/010", "approved": true },
+            "dropped": false,
+            "pairings": [],
+            "opponents": [],
+            "received_bye": false,
+            "role": "battler",
+            "standings": { "points": 0, "wins": 0, "losses": 0, "game_wins": 0, "game_losses": 0 }
+        },
+        "1011": {
+            "active": true,
+            "decklist": { "name": "Abzan Midrange", "url": "https://moxfield.com/decks/011", "approved": true },
+            "dropped": false,
+            "pairings": [],
+            "opponents": [],
+            "received_bye": false,
+            "role": "battler",
+            "standings": { "points": 0, "wins": 0, "losses": 0, "game_wins": 0, "game_losses": 0 }
+        },
+        "1012": {
+            "active": true,
+            "decklist": { "name": "Mardu Burn", "url": "https://moxfield.com/decks/012", "approved": true },
+            "dropped": false,
+            "pairings": [],
+            "opponents": [],
+            "received_bye": false,
+            "role": "battler",
+            "standings": { "points": 0, "wins": 0, "losses": 0, "game_wins": 0, "game_losses": 0 }
+        },
+        "1013": {
+            "active": true,
+            "decklist": { "name": "Sultai Value", "url": "https://moxfield.com/decks/013", "approved": true },
+            "dropped": false,
+            "pairings": [],
+            "opponents": [],
+            "received_bye": false,
+            "role": "battler",
+            "standings": { "points": 0, "wins": 0, "losses": 0, "game_wins": 0, "game_losses": 0 }
+        },
+        "1014": {
+            "active": true,
+            "decklist": { "name": "Bant Blink", "url": "https://moxfield.com/decks/014", "approved": true },
+            "dropped": false,
+            "pairings": [],
+            "opponents": [],
+            "received_bye": false,
+            "role": "battler",
+            "standings": { "points": 0, "wins": 0, "losses": 0, "game_wins": 0, "game_losses": 0 }
+        },
+        "1015": {
+            "active": true,
+            "decklist": { "name": "Izzet Spells", "url": "https://moxfield.com/decks/015", "approved": true },
+            "dropped": false,
+            "pairings": [],
+            "opponents": [],
+            "received_bye": false,
+            "role": "battler",
+            "standings": { "points": 0, "wins": 0, "losses": 0, "game_wins": 0, "game_losses": 0 }
+        },
+        "1016": {
+            "active": true,
+            "decklist": { "name": "Rakdos Sacrifice", "url": "https://moxfield.com/decks/016", "approved": true },
+            "dropped": false,
+            "pairings": [],
+            "opponents": [],
+            "received_bye": false,
+            "role": "battler",
+            "standings": { "points": 0, "wins": 0, "losses": 0, "game_wins": 0, "game_losses": 0 }
+        },
+        "1017": {
+            "active": true,
+            "decklist": { "name": "Not Submitted", "url": "Not Submitted", "approved": false },
+            "dropped": false,
+            "pairings": [],
+            "opponents": [],
+            "received_bye": false,
+            "role": "jammer",
+            "standings": { "points": 0, "wins": 0, "losses": 0, "game_wins": 0, "game_losses": 0 }
+        },
+        "1018": {
+            "active": true,
+            "decklist": { "name": "Not Submitted", "url": "Not Submitted", "approved": false },
+            "dropped": false,
+            "pairings": [],
+            "opponents": [],
+            "received_bye": false,
+            "role": "jammer",
+            "standings": { "points": 0, "wins": 0, "losses": 0, "game_wins": 0, "game_losses": 0 }
+        },
+        "1019": {
+            "active": true,
+            "decklist": { "name": "Not Submitted", "url": "Not Submitted", "approved": false },
+            "dropped": false,
+            "pairings": [],
+            "opponents": [],
+            "received_bye": false,
+            "role": "jammer",
+            "standings": { "points": 0, "wins": 0, "losses": 0, "game_wins": 0, "game_losses": 0 }
+        },
+        "1020": {
+            "active": true,
+            "decklist": { "name": "Not Submitted", "url": "Not Submitted", "approved": false },
+            "dropped": false,
+            "pairings": [],
+            "opponents": [],
+            "received_bye": false,
+            "role": "jammer",
+            "standings": { "points": 0, "wins": 0, "losses": 0, "game_wins": 0, "game_losses": 0 }
+        }
+    }
+}
