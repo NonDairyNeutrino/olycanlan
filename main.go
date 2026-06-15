@@ -1944,7 +1944,7 @@ func main() {
 				roundsData[currentRoundStr] = pendingRound
 				roundsData[currentRoundStr].(map[string]interface{})["status"] = "active"
 
-				//Construct embed for posting
+				//Construct embed for posting & finalize pairings
 				newPairings := pendingRound["pairings"].([]interface{})
 
 				var fields []*discordgo.MessageEmbedField
@@ -1952,17 +1952,27 @@ func main() {
 					var value string
 					p := pairing.(map[string]interface{})
 					p1 := p["player1"].(string)
-					p1W := playerData[p1].(map[string]interface{})["standings"].(map[string]interface{})["wins"].(float64)
-					p1L := playerData[p1].(map[string]interface{})["standings"].(map[string]interface{})["losses"].(float64)
+					p1Data := playerData[p1].(map[string]interface{})
+					p1Pairings := p1Data["pairings"].([]interface{})
+					p1W := p1Data["standings"].(map[string]interface{})["wins"].(float64)
+					p1L := p1Data["standings"].(map[string]interface{})["losses"].(float64)
 					bye := p["bye"].(bool)
 					table := p["table"].(float64)
 
 					if bye {
+						//Assign received bye as true
+						p1Data["received_bye"] = true
 						value = fmt.Sprintf("BYE: <@%s> (%d-%d)", p1, int(p1W), int(p1L))
 					} else {
 						p2 := p["player2"].(string)
-						p2W := playerData[p2].(map[string]interface{})["standings"].(map[string]interface{})["wins"].(float64)
-						p2L := playerData[p2].(map[string]interface{})["standings"].(map[string]interface{})["losses"].(float64)
+						p2Data := playerData[p2].(map[string]interface{})
+						p2Pairings := p2Data["pairings"].([]interface{})
+						p2W := p2Data["standings"].(map[string]interface{})["wins"].(float64)
+						p2L := p2Data["standings"].(map[string]interface{})["losses"].(float64)
+
+						//Finalize eachother's pairings
+						p1Data["pairings"] = append(p1Pairings, p2)
+						p2Data["pairings"] = append(p2Pairings, p1)
 
 						value = fmt.Sprintf("<@%s> (%d-%d) vs <@%s> (%d-%d)",
 							p1, int(p1W), int(p1L),
@@ -2220,7 +2230,6 @@ func main() {
 					pID := p["player1"].(string)
 
 					pData := playersData[pID].(map[string]interface{})
-					pData["received_bye"] = true
 					pStandings := pData["standings"].(map[string]interface{})
 					pStandings["wins"] = pStandings["wins"].(float64) + float64(1)
 					pStandings["points"] = pStandings["points"].(float64) + float64(3)
