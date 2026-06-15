@@ -1,3 +1,4 @@
+# CLAUDE GENERATED - Probably some weirdness in here. 
 # Bot Testing Checklist
 # Format: [FILE SET] indicates which JSON files to load before testing
 # File sets use shorthand: meta_X = metadata_X, play_X = players_X, seas_X = season_X, mat_X = matches_X
