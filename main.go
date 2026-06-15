@@ -1444,6 +1444,8 @@ func main() {
 				}
 			case "new-season":
 
+				//TODO -> Clear roles of all battlers and jammers to past league player
+
 				//Read metadata for if league signups are open
 				botData.Mutex.Lock()
 				metaData := botData.Metadata["current_season"].(map[string]interface{})
@@ -1600,6 +1602,53 @@ func main() {
 				}
 				if err_savePlayers != nil {
 					return
+				}
+
+				//Clear the battler and jammer roles of all players and add past league player if they were a battler/jammer
+				members, err_roles := s.GuildMembers(i.GuildID, "", 1000)
+				if err_roles != nil {
+					log.Println("Error reseting guild roles")
+				}
+
+				for _, member := range members {
+					hadRole := false
+
+					//Clear battler
+					if memberHasRole(member, []string{
+						os.Getenv("BATTLER_ID"),
+					}) {
+						s.GuildMemberRoleRemove(
+							i.GuildID,
+							member.User.ID,
+							os.Getenv("BATTLER_ID"),
+						)
+						hadRole = true
+					}
+
+					//Clear jammer
+					if memberHasRole(member, []string{
+						os.Getenv("JAMMER_ID"),
+					}) {
+						s.GuildMemberRoleRemove(
+							i.GuildID,
+							member.User.ID,
+							os.Getenv("JAMMER_ID"),
+						)
+						hadRole = true
+					}
+
+					//If they had either role, and they dont have the previous league player role, add that role.
+					if hadRole {
+						if !memberHasRole(member, []string{
+							os.Getenv("INACTIVE_ID"),
+						}) {
+							s.GuildMemberRoleAdd(
+								i.GuildID,
+								member.User.ID,
+								os.Getenv("INACTIVE_ID"),
+							)
+						}
+					}
 				}
 
 				//Reply with a hidden message that the league is now open

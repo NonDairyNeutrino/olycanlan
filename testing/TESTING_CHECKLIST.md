@@ -406,3 +406,8 @@
 - [ ] Repeat /round new through /round close for all rounds
 - [ ] Final /round new — lone undefeated player detected, tournament over message sent
 - [ ] /league new-season — all data archived, fresh season initialized
+
+---
+
+## ADDED AFTER BOT
+- [ ] /league new-season clears battler/jammer roles and adds past league player role
