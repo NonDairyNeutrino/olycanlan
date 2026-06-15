@@ -1278,7 +1278,7 @@ func main() {
 					},
 				)
 				if err_post != nil {
-					log.Printf("Error sending message in admin channel: %v", err)
+					log.Printf("Error sending message in admin channel: %v", err_post)
 					return
 				}
 				return
@@ -1445,214 +1445,214 @@ func main() {
 			case "new-season":
 
 				//Read metadata for if league signups are open
+				botData.Mutex.Lock()
 				metaData := botData.Metadata["current_season"].(map[string]interface{})
 				signupStatus := metaData["signups"].(bool)
 				oldSeasonNum := metaData["season"].(float64)
 
-				if !signupStatus {
-					//If false, then new season can be opened
-
-					//Lock the botData
-					botData.Mutex.Lock()
-
-					//Update start date
-					//Get input date
-					subOptions := i.ApplicationCommandData().Options[0].Options
-					inputDate := subOptions[0].StringValue()
-
-					//Check date formatting
-					startDate, err := time.Parse("01-02-2006", inputDate)
-					if err != nil {
-						//Send hidden command to resend with correct date formatting
-						replyEphemeral(s, i, fmt.Sprintf("Your submitted date `%v` was not in the correct MM-DD-YYYY format", inputDate))
-
-						//unlock data before evacuating
-						botData.Mutex.Unlock()
-						return
-					}
-
-					//Reformat date for consistency
-					storedDate := startDate.Format(time.RFC3339)
-
-					//Write new start date to league
-					metaData["start_date"] = storedDate
-
-					//Update the signup status
-					metaData["signups"] = true
-
-					//Update the current season
-					newSeasonNum := oldSeasonNum + 1
-					metaData["season"] = newSeasonNum
-
-					//Reset the round counter
-					metaData["current_round"] = 0
-
-					//Clean matches.json data, moving matches to archive and resetting metadata
-					seasonMatchesData := botData.Matches["current_season"].(map[string]interface{})
-					currentMatches := seasonMatchesData["matches"].(map[string]interface{})
-
-					archiveRoot := botData.Matches["archive"].(map[string]interface{})
-					archiveMatches := archiveRoot["matches"].(map[string]interface{})
-
-					//change status to archived and move to archive
-					for id, match := range currentMatches {
-						matchData := match.(map[string]interface{})
-						matchData["status"] = "archived"
-						archiveMatches[id] = matchData
-					}
-
-					//Clean season.json data. Saving current to archive and making fresh season data
-					//clear current_season
-					seasonMatchesData["matches"] = map[string]interface{}{}
-					//reset matchID counter
-					seasonMetaData := seasonMatchesData["metadata"].(map[string]interface{})
-					seasonMetaData["next_match_id"] = 1
-
-					//Add player data from season.json to historical players.json
-					leagueDataHist := botData.Players["players"].(map[string]interface{})
-					leagueDataSeason := botData.Season["season_players"].(map[string]interface{})
-
-					for id := range leagueDataSeason {
-						//Gather player specific data
-						playerDataSeason := leagueDataSeason[id].(map[string]interface{})
-						playerDataHist := leagueDataHist[id].(map[string]interface{})
-
-						//Establish subsets
-						playerSeasonStandings := playerDataSeason["standings"].(map[string]interface{})
-						playerSeasonDeck := playerDataSeason["decklist"].(map[string]interface{})
-						playerHistRecord := playerDataHist["historical_record"].(map[string]interface{})
-						playerLastDeck := playerDataHist["last_decklist"].(map[string]interface{})
-
-						//Update historical_record
-						playerHistRecord["wins"] =
-							playerHistRecord["wins"].(float64) +
-								playerSeasonStandings["wins"].(float64)
-						playerHistRecord["losses"] =
-							playerHistRecord["losses"].(float64) +
-								playerSeasonStandings["losses"].(float64)
-						playerHistRecord["game_wins"] =
-							playerHistRecord["game_wins"].(float64) +
-								playerSeasonStandings["game_wins"].(float64)
-						playerHistRecord["game_losses"] =
-							playerHistRecord["game_losses"].(float64) +
-								playerSeasonStandings["game_losses"].(float64)
-
-						//Update last_decklist only if they submitted one (as a battler)
-						if playerSeasonDeck["url"] != "" {
-							playerLastDeck["name"] = playerSeasonDeck["name"]
-							playerLastDeck["url"] = playerSeasonDeck["url"]
-						}
-
-						//Update seasons_played
-						seasonsPlayed := playerDataHist["seasons_played"].([]interface{})
-						seasonsPlayed = append(seasonsPlayed, oldSeasonNum)
-						playerDataHist["seasons_played"] = seasonsPlayed
-
-					}
-
-					//save current season data to archive
-					data, err := json.MarshalIndent(
-						botData.Season,
-						"",
-						"    ",
-					)
-					if err != nil {
-						log.Printf("Error marshalling season.json for archive: %v", err)
-						botData.Mutex.Unlock()
-						return
-					}
-					err = os.WriteFile(
-						fmt.Sprintf("site/data/archive/season-%v.json", oldSeasonNum),
-						data,
-						0644,
-					)
-					if err != nil {
-						log.Printf("Error saving season.json to archive: %v", err)
-						botData.Mutex.Unlock()
-						return
-					}
-					log.Println("season.json archived")
-
-					//reset season data
-					botData.Season = map[string]interface{}{
-						"rounds":         map[string]interface{}{},
-						"season_players": map[string]interface{}{},
-					}
-
-					//Write back to the JSON data
-					err_saveMeta := saveMetadata()
-					err_saveMatches := saveMatches()
-					err_saveSeason := saveSeason()
-					err_savePlayers := savePlayers()
-					botData.Mutex.Unlock()
-					if err_saveMeta != nil {
-						return
-					}
-					if err_saveMatches != nil {
-						return
-					}
-					if err_saveSeason != nil {
-						return
-					}
-					if err_savePlayers != nil {
-						return
-					}
-
-					//Reply with a hidden message that the league is now open
-					replyEphemeral(s, i, fmt.Sprintf("Olympia Canlander Season %v is now open!\nAn announcement will be posted in <#%v>", newSeasonNum, os.Getenv("SEASON_CHNL_ID")))
-
-					//format a display date
-					//NOT NECESSARY BUT KEEPING FOR NOW -> location, _ := time.LoadLocation("America/Los_Angeles")
-					displayDate := startDate.Format("January 2, 2006")
-
-					//Make league opening announcement embed msg
-					embed := &discordgo.MessageEmbed{
-						Title:       "🍁⚔️ Olympia Canadian Highlander League Signups Are Now OPEN! 👊🍁",
-						Description: fmt.Sprintf("Season %v", newSeasonNum),
-						Fields: []*discordgo.MessageEmbedField{
-							{
-								Value: fmt.Sprintf(
-									"Welcome to Olympia Canlander Season %v.\n"+
-										"The league will begin on %v. \n\n"+
-										"📝 | Signup using `/signup battler` or `/signup jammer`. Battlers must submit their decklist before the season begins.\n\n"+
-										"📖 | [RULES](https://docs.google.com/document/d/1RZqrqEkHq-7VvKPMwbnqLxN6dfciJkXXuS5MKVr-KNI/edit?usp=sharing) | You can find the full rules for this season here or by typing the `!rules`.\n",
-									newSeasonNum,
-									displayDate,
-								),
-								Inline: true,
-							},
-						},
-						Color: 0xD80621, // Canadian Flag Red 🍁
-					}
-
-					//Post announcement
-					_, err_announce := s.ChannelMessageSendComplex(
-						os.Getenv("SEASON_CHNL_ID"),
-
-						&discordgo.MessageSend{
-							Content: "@everyone",
-
-							Embeds: []*discordgo.MessageEmbed{
-								embed,
-							},
-
-							AllowedMentions: &discordgo.MessageAllowedMentions{
-								Parse: []discordgo.AllowedMentionType{
-									discordgo.AllowedMentionTypeEveryone,
-								},
-							},
-						},
-					)
-
-					if err_announce != nil {
-						log.Printf("Error making League Opening Announcement: %v\n", err_announce)
-						return
-					}
-
-				} else {
+				if signupStatus {
 					//Reply and say that they are already open
 					replyEphemeral(s, i, "The current league is already open.\nThe current league season must be closed (`/league close-signups`) before a new season can be began.\nCarry on 🍁")
+					botData.Mutex.Unlock()
+					return
 				}
+
+				//If false, then new season can be opened
+
+				//Update start date
+				//Get input date
+				subOptions := i.ApplicationCommandData().Options[0].Options
+				inputDate := subOptions[0].StringValue()
+
+				//Check date formatting
+				startDate, err := time.Parse("01-02-2006", inputDate)
+				if err != nil {
+					//Send hidden command to resend with correct date formatting
+					replyEphemeral(s, i, fmt.Sprintf("Your submitted date `%v` was not in the correct MM-DD-YYYY format", inputDate))
+
+					//unlock data before evacuating
+					botData.Mutex.Unlock()
+					return
+				}
+
+				//Reformat date for consistency
+				storedDate := startDate.Format(time.RFC3339)
+
+				//Write new start date to league
+				metaData["start_date"] = storedDate
+
+				//Update the signup status
+				metaData["signups"] = true
+
+				//Update the current season
+				newSeasonNum := oldSeasonNum + 1
+				metaData["season"] = newSeasonNum
+
+				//Reset the round counter
+				metaData["current_round"] = 0
+
+				//Clean matches.json data, moving matches to archive and resetting metadata
+				seasonMatchesData := botData.Matches["current_season"].(map[string]interface{})
+				currentMatches := seasonMatchesData["matches"].(map[string]interface{})
+
+				archiveRoot := botData.Matches["archive"].(map[string]interface{})
+				archiveMatches := archiveRoot["matches"].(map[string]interface{})
+
+				//change status to archived and move to archive
+				for id, match := range currentMatches {
+					matchData := match.(map[string]interface{})
+					matchData["status"] = "archived"
+					archiveMatches[id] = matchData
+				}
+
+				//Clean season.json data. Saving current to archive and making fresh season data
+				//clear current_season
+				seasonMatchesData["matches"] = map[string]interface{}{}
+				//reset matchID counter
+				seasonMetaData := seasonMatchesData["metadata"].(map[string]interface{})
+				seasonMetaData["next_match_id"] = 1
+
+				//Add player data from season.json to historical players.json
+				leagueDataHist := botData.Players["players"].(map[string]interface{})
+				leagueDataSeason := botData.Season["season_players"].(map[string]interface{})
+
+				for id := range leagueDataSeason {
+					//Gather player specific data
+					playerDataSeason := leagueDataSeason[id].(map[string]interface{})
+					playerDataHist := leagueDataHist[id].(map[string]interface{})
+
+					//Establish subsets
+					playerSeasonStandings := playerDataSeason["standings"].(map[string]interface{})
+					playerSeasonDeck := playerDataSeason["decklist"].(map[string]interface{})
+					playerHistRecord := playerDataHist["historical_record"].(map[string]interface{})
+					playerLastDeck := playerDataHist["last_decklist"].(map[string]interface{})
+
+					//Update historical_record
+					playerHistRecord["wins"] =
+						playerHistRecord["wins"].(float64) +
+							playerSeasonStandings["wins"].(float64)
+					playerHistRecord["losses"] =
+						playerHistRecord["losses"].(float64) +
+							playerSeasonStandings["losses"].(float64)
+					playerHistRecord["game_wins"] =
+						playerHistRecord["game_wins"].(float64) +
+							playerSeasonStandings["game_wins"].(float64)
+					playerHistRecord["game_losses"] =
+						playerHistRecord["game_losses"].(float64) +
+							playerSeasonStandings["game_losses"].(float64)
+
+					//Update last_decklist only if they submitted one (as a battler)
+					if playerSeasonDeck["url"] != "" {
+						playerLastDeck["name"] = playerSeasonDeck["name"]
+						playerLastDeck["url"] = playerSeasonDeck["url"]
+					}
+
+					//Update seasons_played
+					seasonsPlayed := playerDataHist["seasons_played"].([]interface{})
+					seasonsPlayed = append(seasonsPlayed, oldSeasonNum)
+					playerDataHist["seasons_played"] = seasonsPlayed
+
+				}
+
+				//save current season data to archive
+				data, err := json.MarshalIndent(
+					botData.Season,
+					"",
+					"    ",
+				)
+				if err != nil {
+					log.Printf("Error marshalling season.json for archive: %v", err)
+					botData.Mutex.Unlock()
+					return
+				}
+				err = os.WriteFile(
+					fmt.Sprintf("site/data/archive/season-%v.json", oldSeasonNum),
+					data,
+					0644,
+				)
+				if err != nil {
+					log.Printf("Error saving season.json to archive: %v", err)
+					botData.Mutex.Unlock()
+					return
+				}
+				log.Println("season.json archived")
+
+				//reset season data
+				botData.Season = map[string]interface{}{
+					"rounds":         map[string]interface{}{},
+					"season_players": map[string]interface{}{},
+				}
+
+				//Write back to the JSON data
+				err_saveMeta := saveMetadata()
+				err_saveMatches := saveMatches()
+				err_saveSeason := saveSeason()
+				err_savePlayers := savePlayers()
+				botData.Mutex.Unlock()
+				if err_saveMeta != nil {
+					return
+				}
+				if err_saveMatches != nil {
+					return
+				}
+				if err_saveSeason != nil {
+					return
+				}
+				if err_savePlayers != nil {
+					return
+				}
+
+				//Reply with a hidden message that the league is now open
+				replyEphemeral(s, i, fmt.Sprintf("Olympia Canlander Season %v is now open!\nAn announcement will be posted in <#%v>", newSeasonNum, os.Getenv("SEASON_CHNL_ID")))
+
+				//format a display date
+				//NOT NECESSARY BUT KEEPING FOR NOW -> location, _ := time.LoadLocation("America/Los_Angeles")
+				displayDate := startDate.Format("January 2, 2006")
+
+				//Make league opening announcement embed msg
+				embed := &discordgo.MessageEmbed{
+					Title:       "🍁⚔️ Olympia Canadian Highlander League Signups Are Now OPEN! 👊🍁",
+					Description: fmt.Sprintf("Season %v", newSeasonNum),
+					Fields: []*discordgo.MessageEmbedField{
+						{
+							Value: fmt.Sprintf(
+								"Welcome to Olympia Canlander Season %v.\n"+
+									"The league will begin on %v. \n\n"+
+									"📝 | Signup using `/signup battler` or `/signup jammer`. Battlers must submit their decklist before the season begins.\n\n"+
+									"📖 | [RULES](https://docs.google.com/document/d/1RZqrqEkHq-7VvKPMwbnqLxN6dfciJkXXuS5MKVr-KNI/edit?usp=sharing) | You can find the full rules for this season here or by typing the `!rules`.\n",
+								newSeasonNum,
+								displayDate,
+							),
+							Inline: true,
+						},
+					},
+					Color: 0xD80621, // Canadian Flag Red 🍁
+				}
+
+				//Post announcement
+				_, err_announce := s.ChannelMessageSendComplex(
+					os.Getenv("SEASON_CHNL_ID"),
+
+					&discordgo.MessageSend{
+						Content: "@everyone",
+
+						Embeds: []*discordgo.MessageEmbed{
+							embed,
+						},
+
+						AllowedMentions: &discordgo.MessageAllowedMentions{
+							Parse: []discordgo.AllowedMentionType{
+								discordgo.AllowedMentionTypeEveryone,
+							},
+						},
+					},
+				)
+
+				if err_announce != nil {
+					log.Printf("Error making League Opening Announcement: %v\n", err_announce)
+					return
+				}
+
 			}
 		case "round":
 			sub := i.ApplicationCommandData().Options[0].Name
@@ -1915,12 +1915,17 @@ func main() {
 
 			case "post":
 
-				//TODO: - Add player to eachother's pairings
-
 				//Post in weekly-matches the current round structure
 
 				//retrieve the "pending" round
 				botData.Mutex.Lock()
+
+				//Re-load the data to ensure typing works (from /round new)
+				err_load := loadSeason()
+				if err_load != nil {
+					log.Println("Error loading season data during round post")
+					return
+				}
 
 				roundsData := botData.Season["rounds"].(map[string]interface{}) // Pull rounds data
 				pendingRound, ok := roundsData["pending"].(map[string]interface{})
@@ -2976,7 +2981,7 @@ func main() {
 							Inline: false,
 						},
 						{
-							Name:   "HISORICAL DATA",
+							Name:   "HISTORICAL DATA",
 							Value:  histMsg,
 							Inline: false,
 						},
@@ -3319,14 +3324,23 @@ func main() {
 					Embeds:  []*discordgo.MessageEmbed{embed},
 				},
 			)
-			replyEphemeral(s, i, fmt.Sprintf("Reminder posted in <#%v>", os.Getenv("MATCHES_CHNL_ID")))
+			s.InteractionRespond(
+				i.Interaction,
+				&discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseUpdateMessage,
+					Data: &discordgo.InteractionResponseData{
+						Content: fmt.Sprintf("Reminder posted in <#%v>", os.Getenv("MATCHES_CHNL_ID")),
+						Flags:   discordgo.MessageFlagsEphemeral,
+					},
+				},
+			)
 		}
 	})
 
 	//---------------------------------------------------------------------//
 	// This aligns the intents of the bot with the privileged intents.
 	// Not 100% confident what this is needed for
-	discord.Identify.Intents = discordgo.IntentsAllWithoutPrivileged
+	discord.Identify.Intents = discordgo.IntentsAllWithoutPrivileged | discordgo.IntentGuildMembers
 
 	err = discord.Open()
 	if err != nil {
