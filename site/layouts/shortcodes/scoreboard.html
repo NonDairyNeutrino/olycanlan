@@ -13,30 +13,37 @@
     </style>
 </head>
 
+{{ $players := .Site.Data.season.season_players }}
+
+{{ $sorted := slice }}
+{{ range $playerID, $player := $players }}
+    {{ $entry := dict "id" $playerID "player" $player "wins" $player.standings.wins "points" $player.standings.points }}
+    {{ $sorted = $sorted | append $entry }}
+{{ end }}
+
+{{ $sorted = sort $sorted "points" "desc" }}
+{{ $sorted = sort $sorted "wins" "desc" }}
+
 <table>
     <tr>
         <th>Player</th>
         <th>Record</th>
         <th>Points</th>
     </tr>
-    
-    {{ range $playerID, $player := .Site.Data.season.season_players }}
-    <tr>
-        <td>
-            {{ with index $.Site.Data.players.players $playerID }}
-                {{ .discord_nickname }}
-            {{ else }}
-                {{ $playerID }}
-            {{ end }}
-        </td>
 
-        <td>
-            {{ $player.standings.wins }}-{{ $player.standings.losses }}
-        </td>
-
-        <td>
-            {{ $player.standings.points }}
-        </td>
-    </tr>
+    {{ range $sorted }}
+        {{ $playerID := .id }}
+        {{ $player := .player }}
+        <tr>
+            <td>
+                {{ with index $.Site.Data.players.players $playerID }}
+                    {{ .discord_nickname }}
+                {{ else }}
+                    {{ $playerID }}
+                {{ end }}
+            </td>
+            <td>{{ $player.standings.wins }}-{{ $player.standings.losses }}</td>
+            <td>{{ $player.standings.points }}</td>
+        </tr>
     {{ end }}
 </table>
