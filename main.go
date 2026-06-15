@@ -384,7 +384,7 @@ var commands = []*discordgo.ApplicationCommand{
 			{
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 				Name:        "check",
-				Description: "Checks if all bounty matches have been reported. Option to posts a reminder for unreported matches to weekly-matches channel.",
+				Description: "Checks if all bounty matches have been reported.",
 			},
 		},
 	},
@@ -965,8 +965,11 @@ func main() {
 				//Revise the player's data in players.json
 				playersHistory := botData.Players["players"].(map[string]interface{})
 
-				//Set player nickname
+				//Set player server name (nick). If no server name, use display name (global name). If no display name use username
 				nickname := guildMember.Nick
+				if nickname == "" {
+					nickname = guildMember.User.GlobalName
+				}
 				if nickname == "" {
 					nickname = guildMember.User.Username
 				}
@@ -1083,8 +1086,11 @@ func main() {
 				//Revise the player's data in players.json
 				playersHistory := botData.Players["players"].(map[string]interface{})
 
-				//Set player nickname
+				//Set player server name (nick). If no server name, use display name (global name). If no display name use username
 				nickname := guildMember.Nick
+				if nickname == "" {
+					nickname = guildMember.User.GlobalName
+				}
 				if nickname == "" {
 					nickname = guildMember.User.Username
 				}
@@ -1165,7 +1171,7 @@ func main() {
 					//Make error announcement in organizer channel
 					s.ChannelMessageSend(
 						os.Getenv("ADMIN_CHNL_ID"),
-						fmt.Sprintf("<@%v> - Bot failed to retrieve <@%v>'s player data for decklist submission.\nThey either incorrectly have the Battler ⚔️ role, or their data has been corrupted.", os.Getenv("ORGANIZER_ID"), i.Member.User.ID),
+						fmt.Sprintf("<@&%v> - Bot failed to retrieve <@%v>'s player data for decklist submission.\nThey either incorrectly have the Battler ⚔️ role, or their data has been corrupted.", os.Getenv("ORGANIZER_ID"), i.Member.User.ID),
 					)
 					return
 				}
@@ -1208,6 +1214,11 @@ func main() {
 						}
 					}
 
+				}
+
+				//If no name submitted just use a generic DECKLIST
+				if name == "" {
+					name = "DECKLIST"
 				}
 
 				//Normalize the URL formatting
@@ -1371,81 +1382,85 @@ func main() {
 				metaData := botData.Metadata["current_season"].(map[string]interface{})
 				signupStatus := metaData["signups"].(bool)
 
-				if !signupStatus {
-					//If false open them
-
-					//Lock the botData
-					botData.Mutex.Lock()
-
-					//Update the signup status
-					metaData["signups"] = true
-
-					//Write back to the JSON data
-					err := saveMetadata()
-					botData.Mutex.Unlock()
-					if err != nil {
-						return
-					}
-
-					//Reply with a hidden message that the league is now open
-					replyEphemeral(s, i, "Signups for the current league have been opened!")
-				} else {
+				if signupStatus {
 					//Reply and say that they are already open
 					replyEphemeral(s, i, "The league is already open! Carry on 🍁")
+					return
 				}
+
+				//If false open them
+				//Lock the botData
+				botData.Mutex.Lock()
+
+				//Update the signup status
+				metaData["signups"] = true
+
+				//Write back to the JSON data
+				err := saveMetadata()
+				botData.Mutex.Unlock()
+				if err != nil {
+					return
+				}
+
+				//Reply with a hidden message that the league is now open
+				replyEphemeral(s, i, "Signups for the current league have been opened!")
+
 			case "close-signups":
 				//Read metadata for if league signups are open
 				metaData := botData.Metadata["current_season"].(map[string]interface{})
 				signupStatus := metaData["signups"].(bool)
 
-				if signupStatus {
-					//If true close them
-					//Lock the botData
-					botData.Mutex.Lock()
-
-					//Update the signup status
-					metaData["signups"] = false
-
-					//Update the current_players metadata by counting the "active" players in season data
-					seasonPlayers := botData.Season["season_players"].(map[string]interface{})
-					activePlayers := 0
-					activeBattlers := 0
-
-					for _, player := range seasonPlayers {
-						active, _ := player.(map[string]interface{})["active"].(bool)
-						if active {
-							activePlayers++
-							role, _ := player.(map[string]interface{})["role"].(string)
-							if role == "battler" {
-								activeBattlers++
-							}
-						}
-					}
-
-					metaData["active_players"] = activePlayers
-					metaData["battlers"] = activeBattlers
-
-					//Determine total rounds needed using log2
-					roundsNeeded := math.Ceil(math.Log2(float64(activeBattlers))) // Total Rounds Needed: Log2(#battlers) ROUNDED UP
-					metaData["total_rounds"] = float64(roundsNeeded)
-
-					//Write back to the JSON data
-					err := saveMetadata()
-					botData.Mutex.Unlock()
-					if err != nil {
-						return
-					}
-
-					//Reply with a hidden message that the league is now closed
-					replyEphemeral(s, i, "Signups for the current league have been closed!")
-				} else {
+				if !signupStatus {
 					//Reply and say that they are already closed
 					replyEphemeral(s, i, "The league is already closed! Carry on 🍁")
+					return
 				}
+
+				//If true close them
+				//Lock the botData
+				botData.Mutex.Lock()
+
+				//Update the signup status
+				metaData["signups"] = false
+
+				//Update the current_players metadata by counting the "active" players in season data
+				seasonPlayers := botData.Season["season_players"].(map[string]interface{})
+				activePlayers := 0
+				activeBattlers := 0
+
+				for _, player := range seasonPlayers {
+					active, _ := player.(map[string]interface{})["active"].(bool)
+					if active {
+						activePlayers++
+						role, _ := player.(map[string]interface{})["role"].(string)
+						if role == "battler" {
+							activeBattlers++
+						}
+					}
+				}
+
+				metaData["active_players"] = float64(activePlayers)
+				metaData["battlers"] = float64(activeBattlers)
+
+				//Determine total rounds needed using log2
+				if activeBattlers > 1 {
+					roundsNeeded := math.Ceil(math.Log2(float64(activeBattlers))) // Total Rounds Needed: Log2(#battlers) ROUNDED UP
+					metaData["total_rounds"] = float64(roundsNeeded)
+				} else {
+					metaData["total_rounbds"] = float64(0)
+				}
+
+				//Write back to the JSON data
+				err := saveMetadata()
+				botData.Mutex.Unlock()
+				if err != nil {
+					return
+				}
+
+				//Reply with a hidden message that the league is now closed
+				replyEphemeral(s, i, fmt.Sprintf("Signups for the current league have been closed!\n\n**Battlers ⚔️:** %d | **Jammers 👊:** %d | **Total Rounds:** %v", activeBattlers, activePlayers-activeBattlers, metaData["total_rounds"].(float64)))
+
 			case "new-season":
-
-				//TODO -> Clear roles of all battlers and jammers to past league player
-
 				//Read metadata for if league signups are open
 				botData.Mutex.Lock()
 				metaData := botData.Metadata["current_season"].(map[string]interface{})
@@ -1454,7 +1469,7 @@ func main() {
 
 				if signupStatus {
 					//Reply and say that they are already open
-					replyEphemeral(s, i, "The current league is already open.\nThe current league season must be closed (`/league close-signups`) before a new season can be began.\nCarry on 🍁")
+					replyEphemeral(s, i, "The current league is already open.\nThe current league season must be closed (`/league close-signups`) before a new season can begin.\nCarry on 🍁")
 					botData.Mutex.Unlock()
 					return
 				}
@@ -1492,6 +1507,11 @@ func main() {
 
 				//Reset the round counter
 				metaData["current_round"] = 0
+
+				//Reset player counters and rounds
+				metaData["active_players"] = 0
+				metaData["battlers"] = 0
+				metaData["total_rounds"] = 0
 
 				//Clean matches.json data, moving matches to archive and resetting metadata
 				seasonMatchesData := botData.Matches["current_season"].(map[string]interface{})
@@ -1544,7 +1564,7 @@ func main() {
 							playerSeasonStandings["game_losses"].(float64)
 
 					//Update last_decklist only if they submitted one (as a battler)
-					if playerSeasonDeck["url"] != "" {
+					if playerDataSeason["role"].(string) == "battler" {
 						playerLastDeck["name"] = playerSeasonDeck["name"]
 						playerLastDeck["url"] = playerSeasonDeck["url"]
 					}
@@ -2607,8 +2627,11 @@ func main() {
 					//Revise the player's data in players.json
 					playersHistory := botData.Players["players"].(map[string]interface{})
 
-					//Set player nickname
+					//Set player server name (nick). If no server name, use display name (global name). If no display name use username
 					nickname := guildMember.Nick
+					if nickname == "" {
+						nickname = guildMember.User.GlobalName
+					}
 					if nickname == "" {
 						nickname = guildMember.User.Username
 					}
@@ -2726,8 +2749,11 @@ func main() {
 					//Revise the player's data in players.json
 					playersHistory := botData.Players["players"].(map[string]interface{})
 
-					//Set player nickname
+					//Set player server name (nick). If no server name, use display name (global name). If no display name use username
 					nickname := guildMember.Nick
+					if nickname == "" {
+						nickname = guildMember.User.GlobalName
+					}
 					if nickname == "" {
 						nickname = guildMember.User.Username
 					}

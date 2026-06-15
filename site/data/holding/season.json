@@ -1,0 +1,526 @@
+{
+    "rounds": {
+        "1": {
+            "pairings": [
+                {
+                    "bye": false,
+                    "match_id": "",
+                    "player1": "1026",
+                    "player2": "1001",
+                    "reported": false,
+                    "result": "",
+                    "table": 1,
+                    "winner": ""
+                },
+                {
+                    "bye": false,
+                    "match_id": "",
+                    "player1": "1007",
+                    "player2": "1002",
+                    "reported": false,
+                    "result": "",
+                    "table": 2,
+                    "winner": ""
+                },
+                {
+                    "bye": false,
+                    "match_id": "",
+                    "player1": "1008",
+                    "player2": "1014",
+                    "reported": false,
+                    "result": "",
+                    "table": 3,
+                    "winner": ""
+                },
+                {
+                    "bye": false,
+                    "match_id": "",
+                    "player1": "1012",
+                    "player2": "1010",
+                    "reported": false,
+                    "result": "",
+                    "table": 4,
+                    "winner": ""
+                },
+                {
+                    "bye": false,
+                    "match_id": "",
+                    "player1": "1020",
+                    "player2": "1016",
+                    "reported": false,
+                    "result": "",
+                    "table": 5,
+                    "winner": ""
+                },
+                {
+                    "bye": false,
+                    "match_id": "",
+                    "player1": "1022",
+                    "player2": "1019",
+                    "reported": false,
+                    "result": "",
+                    "table": 6,
+                    "winner": ""
+                },
+                {
+                    "bye": false,
+                    "match_id": "",
+                    "player1": "1018",
+                    "player2": "1027",
+                    "reported": false,
+                    "result": "",
+                    "table": 7,
+                    "winner": ""
+                },
+                {
+                    "bye": false,
+                    "match_id": "",
+                    "player1": "1023",
+                    "player2": "1015",
+                    "reported": false,
+                    "result": "",
+                    "table": 8,
+                    "winner": ""
+                },
+                {
+                    "bye": false,
+                    "match_id": "",
+                    "player1": "1004",
+                    "player2": "1003",
+                    "reported": false,
+                    "result": "",
+                    "table": 9,
+                    "winner": ""
+                },
+                {
+                    "bye": false,
+                    "match_id": "",
+                    "player1": "1009",
+                    "player2": "1013",
+                    "reported": false,
+                    "result": "",
+                    "table": 10,
+                    "winner": ""
+                },
+                {
+                    "bye": false,
+                    "match_id": "",
+                    "player1": "1011",
+                    "player2": "1024",
+                    "reported": false,
+                    "result": "",
+                    "table": 11,
+                    "winner": ""
+                },
+                {
+                    "bye": false,
+                    "match_id": "",
+                    "player1": "1017",
+                    "player2": "1021",
+                    "reported": false,
+                    "result": "",
+                    "table": 12,
+                    "winner": ""
+                },
+                {
+                    "bye": false,
+                    "match_id": "",
+                    "player1": "1005",
+                    "player2": "1006",
+                    "reported": false,
+                    "result": "",
+                    "table": 13,
+                    "winner": ""
+                },
+                {
+                    "bye": true,
+                    "match_id": "",
+                    "player1": "1025",
+                    "player2": "",
+                    "reported": false,
+                    "result": "",
+                    "table": 14,
+                    "winner": ""
+                }
+            ],
+            "status": "active"
+        },
+        "pending": null
+    },
+    "season_players": {
+        "1001": {
+            "active": true,
+            "pairings": [
+                "1018",
+                "1010",
+                "1009",
+                "1002"
+            ],
+            "received_bye": false,
+            "standings": {
+                "losses": 0,
+                "wins": 4
+            }
+        },
+        "1002": {
+            "active": true,
+            "pairings": [
+                "1023",
+                "1012",
+                "1001"
+            ],
+            "received_bye": true,
+            "standings": {
+                "losses": 1,
+                "wins": 3
+            }
+        },
+        "1003": {
+            "active": true,
+            "pairings": [
+                "1011",
+                "1026",
+                "1008",
+                "1006"
+            ],
+            "received_bye": false,
+            "standings": {
+                "losses": 2,
+                "wins": 2
+            }
+        },
+        "1004": {
+            "active": true,
+            "pairings": [
+                "1025",
+                "1005",
+                "1026",
+                "1008"
+            ],
+            "received_bye": false,
+            "standings": {
+                "losses": 2,
+                "wins": 2
+            }
+        },
+        "1005": {
+            "active": true,
+            "pairings": [
+                "1016",
+                "1004",
+                "1027",
+                "1018"
+            ],
+            "received_bye": false,
+            "standings": {
+                "losses": 3,
+                "wins": 1
+            }
+        },
+        "1006": {
+            "active": true,
+            "pairings": [
+                "1019",
+                "1025",
+                "1010",
+                "1003"
+            ],
+            "received_bye": false,
+            "standings": {
+                "losses": 3,
+                "wins": 1
+            }
+        },
+        "1007": {
+            "active": true,
+            "pairings": [
+                "1008",
+                "1014",
+                "1017",
+                "1019"
+            ],
+            "received_bye": false,
+            "standings": {
+                "losses": 1,
+                "wins": 3
+            }
+        },
+        "1008": {
+            "active": true,
+            "pairings": [
+                "1007",
+                "1013",
+                "1003",
+                "1004"
+            ],
+            "received_bye": false,
+            "standings": {
+                "losses": 1,
+                "wins": 3
+            }
+        },
+        "1009": {
+            "active": true,
+            "pairings": [
+                "1020",
+                "1019",
+                "1001",
+                "1026"
+            ],
+            "received_bye": false,
+            "standings": {
+                "losses": 2,
+                "wins": 2
+            }
+        },
+        "1010": {
+            "active": true,
+            "pairings": [
+                "1024",
+                "1001",
+                "1006",
+                "1023"
+            ],
+            "received_bye": false,
+            "standings": {
+                "losses": 1,
+                "wins": 3
+            }
+        },
+        "1011": {
+            "active": true,
+            "pairings": [
+                "1003",
+                "1022",
+                "1023",
+                "1020"
+            ],
+            "received_bye": false,
+            "standings": {
+                "losses": 3,
+                "wins": 1
+            }
+        },
+        "1012": {
+            "active": true,
+            "pairings": [
+                "1017",
+                "1027",
+                "1002",
+                "1016"
+            ],
+            "received_bye": false,
+            "standings": {
+                "losses": 1,
+                "wins": 3
+            }
+        },
+        "1013": {
+            "active": true,
+            "pairings": [
+                "1026",
+                "1008",
+                "1021",
+                "1022"
+            ],
+            "received_bye": false,
+            "standings": {
+                "losses": 3,
+                "wins": 1
+            }
+        },
+        "1014": {
+            "active": true,
+            "pairings": [
+                "1021",
+                "1007",
+                "1015",
+                "1027"
+            ],
+            "received_bye": false,
+            "standings": {
+                "losses": 1,
+                "wins": 3
+            }
+        },
+        "1015": {
+            "active": true,
+            "pairings": [
+                "1027",
+                "1017",
+                "1014",
+                "1024"
+            ],
+            "received_bye": false,
+            "standings": {
+                "losses": 2,
+                "wins": 2
+            }
+        },
+        "1016": {
+            "active": true,
+            "pairings": [
+                "1005",
+                "1018",
+                "1012"
+            ],
+            "received_bye": true,
+            "standings": {
+                "losses": 2,
+                "wins": 2
+            }
+        },
+        "1017": {
+            "active": true,
+            "pairings": [
+                "1012",
+                "1015",
+                "1007"
+            ],
+            "received_bye": true,
+            "standings": {
+                "losses": 3,
+                "wins": 1
+            }
+        },
+        "1018": {
+            "active": true,
+            "pairings": [
+                "1001",
+                "1024",
+                "1016",
+                "1005"
+            ],
+            "received_bye": false,
+            "standings": {
+                "losses": 2,
+                "wins": 2
+            }
+        },
+        "1019": {
+            "active": true,
+            "pairings": [
+                "1006",
+                "1009",
+                "1020",
+                "1007"
+            ],
+            "received_bye": false,
+            "standings": {
+                "losses": 2,
+                "wins": 2
+            }
+        },
+        "1020": {
+            "active": true,
+            "pairings": [
+                "1009",
+                "1021",
+                "1019",
+                "1011"
+            ],
+            "received_bye": false,
+            "standings": {
+                "losses": 2,
+                "wins": 2
+            }
+        },
+        "1021": {
+            "active": true,
+            "pairings": [
+                "1014",
+                "1020",
+                "1013",
+                "1025"
+            ],
+            "received_bye": false,
+            "standings": {
+                "losses": 3,
+                "wins": 1
+            }
+        },
+        "1022": {
+            "active": true,
+            "pairings": [
+                "1023",
+                "1011",
+                "1013"
+            ],
+            "received_bye": true,
+            "standings": {
+                "losses": 2,
+                "wins": 2
+            }
+        },
+        "1023": {
+            "active": true,
+            "pairings": [
+                "1022",
+                "1002",
+                "1011",
+                "1010"
+            ],
+            "received_bye": false,
+            "standings": {
+                "losses": 2,
+                "wins": 2
+            }
+        },
+        "1024": {
+            "active": true,
+            "pairings": [
+                "1010",
+                "1018",
+                "1025",
+                "1015"
+            ],
+            "received_bye": false,
+            "standings": {
+                "losses": 3,
+                "wins": 1
+            }
+        },
+        "1025": {
+            "active": true,
+            "pairings": [
+                "1004",
+                "1006",
+                "1024",
+                "1021"
+            ],
+            "received_bye": false,
+            "standings": {
+                "losses": 4,
+                "wins": 0
+            }
+        },
+        "1026": {
+            "active": true,
+            "pairings": [
+                "1013",
+                "1003",
+                "1004",
+                "1009"
+            ],
+            "received_bye": false,
+            "standings": {
+                "losses": 0,
+                "wins": 4
+            }
+        },
+        "1027": {
+            "active": true,
+            "pairings": [
+                "1015",
+                "1012",
+                "1005",
+                "1014"
+            ],
+            "received_bye": false,
+            "standings": {
+                "losses": 2,
+                "wins": 2
+            }
+        }
+    }
+}

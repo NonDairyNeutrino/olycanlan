@@ -6,80 +6,80 @@
 ---
 
 ## Pre-Testing Setup
-- [ ] Bot connects to Discord successfully
-- [ ] All JSON files load without error on startup
-- [ ] All slash commands register in the guild
-- [ ] .env contains all required variables
+- [x] Bot connects to Discord successfully
+- [x] All JSON files load without error on startup
+- [x] All slash commands register in the guild
+- [x] .env contains all required variables
 
 ---
 
 ## /signup battler
 # [meta_A + play_A + seas_A + mat_A] — Fresh league, no prior data
-- [ ] User with no roles signs up — receives Battler role
-- [ ] User with no roles signs up — season.json creates fresh player entry with correct defaults
-- [ ] User with no roles signs up — players.json creates fresh historical entry
-- [ ] User with no roles signs up — receives ephemeral confirmation
-- [ ] User signs up — nickname used if set, username used if no nickname
+- [x] User with no roles signs up — receives Battler role
+- [x] User with no roles signs up — season.json creates fresh player entry with correct defaults
+- [x] User with no roles signs up — players.json creates fresh historical entry
+- [x] User with no roles signs up — receives ephemeral confirmation
+- [x] User signs up — nickname used if set, username used if no nickname
 
 # [meta_A + play_B + seas_B + mat_A] — Returning player (exists in both JSONs)
-- [ ] Existing player signs up — data updated, not duplicated in season.json
-- [ ] Existing player signs up — nickname updated in players.json, not duplicated
+- [x] Existing player signs up — data updated, not duplicated in season.json
+- [x] Existing player signs up — nickname updated in players.json, not duplicated
 
 # [meta_A + play_B + seas_B + mat_A] — Role conflict
-- [ ] User already a Battler signs up — receives "already signed up" ephemeral, no data changed
-- [ ] User who is a Jammer signs up as Battler — Jammer role removed, Battler role added, season.json role updated
+- [x] User already a Battler signs up — receives "already signed up" ephemeral, no data changed
+- [x] User who is a Jammer signs up as Battler — Jammer role removed, Battler role added, season.json role updated
 
 # [meta_B + play_B + seas_B + mat_A] — Signups closed
-- [ ] Signups closed — user receives "signups closed" ephemeral, no data changed
+- [x] Signups closed — user receives "signups closed" ephemeral, no data changed
 
 ---
 
 ## /signup jammer
 # [meta_A + play_A + seas_A + mat_A]
-- [ ] User with no roles signs up — receives Jammer role
-- [ ] User signs up — season.json creates fresh entry with role "jammer"
-- [ ] User signs up — players.json creates fresh historical entry
-- [ ] User signs up — receives ephemeral confirmation
-- [ ] User signs up — nickname used if set, username if not
+- [x] User with no roles signs up — receives Jammer role
+- [x] User signs up — season.json creates fresh entry with role "jammer"
+- [x] User signs up — players.json creates fresh historical entry
+- [x] User signs up — receives ephemeral confirmation
+- [x] User signs up — nickname used if set, username if not
 
 # [meta_A + play_B + seas_B + mat_A]
-- [ ] Existing player signs up — data updated not duplicated
-- [ ] User already a Jammer — receives "already signed up" ephemeral
-- [ ] User who is a Battler signs up as Jammer — Battler role removed, Jammer role added
+- [x] Existing player signs up — data updated not duplicated
+- [x] User already a Jammer — receives "already signed up" ephemeral
+- [x] User who is a Battler signs up as Jammer — Battler role removed, Jammer role added
 
 ---
 
 ## /signup decklist
 # [meta_A + play_B + seas_B + mat_A] — Normal submission
-- [ ] Non-Battler runs command — receives "Battlers only" ephemeral
-- [ ] Valid URL submitted — season.json decklist updated with URL and name
-- [ ] Valid URL submitted without https:// — URL normalized correctly
-- [ ] Invalid URL submitted — receives "invalid URL" ephemeral, no data changed
-- [ ] Valid submission — admin channel receives decklist review embed with Approve/Reject buttons
-- [ ] Valid submission — embed footer contains correct player ID
-- [ ] Valid submission — user receives confirmation ephemeral
-- [ ] Deck name omitted — submission succeeds with empty name
-- [ ] Player resubmits decklist — old decklist overwritten
+- [x] Non-Battler runs command — receives "Battlers only" ephemeral
+- [x] Valid URL submitted — season.json decklist updated with URL and name
+- [x] Valid URL submitted without https:// — URL normalized correctly
+- [⚠️] Invalid URL submitted — receives "invalid URL" ephemeral, no data changed
+- [x] Valid submission — admin channel receives decklist review embed with Approve/Reject buttons
+- [x] Valid submission — embed footer contains correct player ID
+- [x] Valid submission — user receives confirmation ephemeral
+- [x] Deck name omitted — submission succeeds with empty name
+- [x] Player resubmits decklist — old decklist overwritten
 
 # [meta_A + play_B + seas_B + mat_A] — Missing season data edge case
-- [ ] Battler with Battler role but NO season.json entry — receives error ephemeral, admin channel notified
+- [x] Battler with Battler role but NO season.json entry — receives error ephemeral, admin channel notified
 
 # [meta_B + play_B + seas_B + mat_A] — Signups closed
-- [ ] Signups closed, no decklist submitted — receives "signups closed, no decklist" ephemeral
-- [ ] Signups closed, decklist previously submitted — receives "use original" ephemeral with URL
+- [x] Signups closed, no decklist submitted — receives "signups closed, no decklist" ephemeral
+- [x] Signups closed, decklist previously submitted — receives "use original" ephemeral with URL
 
 ---
 
 ## Decklist Review Buttons (approved / rejected)
 # Requires a real decklist review message in the admin channel from a /signup decklist submission
-- [ ] Approve clicked — season.json decklist approved set to true
-- [ ] Approve clicked — player receives DM confirmation
-- [ ] Approve clicked — embed title changes to "Decklist Approved ✅", color green
-- [ ] Approve clicked — buttons removed from message
-- [ ] Reject clicked — player receives DM denial
-- [ ] Reject clicked — embed title changes to "Decklist Denied ❌", color red
-- [ ] Reject clicked — buttons removed from message
-- [ ] Reject clicked — season.json approved remains false
+- [x] Approve clicked — season.json decklist approved set to true
+- [x] Approve clicked — player receives DM confirmation
+- [x] Approve clicked — embed title changes to "Decklist Approved ✅", color green
+- [x] Approve clicked — buttons removed from message
+- [x] Reject clicked — player receives DM denial
+- [x] Reject clicked — embed title changes to "Decklist Denied ❌", color red
+- [x] Reject clicked — buttons removed from message
+- [x] Reject clicked — season.json approved remains false
 - [ ] Button on non-bot message — silently ignored
 - [ ] Button on wrong embed title — silently ignored
 - [ ] Button on embed with no footer — silently ignored
@@ -89,67 +89,67 @@
 ## /drop
 # [meta_C + play_B + seas_C + mat_B] — Active player drops
 - [ ] Non-participant runs command — receives "not active" ephemeral
-- [ ] Battler drops — Battler role removed, Inactive role added
-- [ ] Battler drops — season.json dropped: true, active: false
-- [ ] Battler drops — receives ephemeral confirmation
-- [ ] Battler drops — admin channel notified with player and role
-- [ ] Jammer drops — Jammer role removed, Inactive role added, season.json updated
-- [ ] Drop with reason — reason in admin channel message
-- [ ] Drop with no reason — "No Reason Provided" in admin message
+- [x] Battler drops — Battler role removed, Inactive role added
+- [x] Battler drops — season.json dropped: true, active: false
+- [x] Battler drops — receives ephemeral confirmation
+- [x] Battler drops — admin channel notified with player and role
+- [x] Jammer drops — Jammer role removed, Inactive role added, season.json updated
+- [x] Drop with reason — reason in admin channel message
+- [x] Drop with no reason — "No Reason Provided" in admin message
 - [ ] Verify no deadlock after drop (subsequent commands work normally) [defer bug fix check]
 
 ---
 
 ## /league open-signups
 # [meta_B + play_B + seas_B + mat_A] — Signups already closed
-- [ ] Non-organizer runs command — receives "admins only" ephemeral
-- [ ] Organizer opens when closed — metadata signups set to true
-- [ ] Organizer opens when closed — receives confirmation ephemeral
+- [x] Non-organizer runs command — receives "admins only" ephemeral
+- [x] Organizer opens when closed — metadata signups set to true
+- [x] Organizer opens when closed — receives confirmation ephemeral
 
 # [meta_A + play_B + seas_B + mat_A] — Signups already open
-- [ ] Organizer opens when already open — receives "already open" ephemeral
+- [x] Organizer opens when already open — receives "already open" ephemeral
 
 ---
 
 ## /league close-signups
 # [meta_A + play_B + seas_B + mat_A] — Signups open
-- [ ] Non-organizer runs command — receives "admins only" ephemeral
-- [ ] Organizer closes — metadata signups set to false
-- [ ] Organizer closes — active_players count correct
-- [ ] Organizer closes — battlers count correct (verify typo fix: "battler" not "battlers")
-- [ ] Organizer closes — total_rounds = ceil(log2(battlers)) correct
-- [ ] Organizer closes — receives confirmation ephemeral
+- [x] Non-organizer runs command — receives "admins only" ephemeral
+- [x] Organizer closes — metadata signups set to false
+- [x] Organizer closes — active_players count correct
+- [x] Organizer closes — battlers count correct (verify typo fix: "battler" not "battlers")
+- [x] Organizer closes — total_rounds = ceil(log2(battlers)) correct
+- [x] Organizer closes — receives confirmation ephemeral
 
 # [meta_B + play_B + seas_B + mat_A] — Signups already closed
-- [ ] Organizer closes when already closed — receives "already closed" ephemeral
+- [x] Organizer closes when already closed — receives "already closed" ephemeral
 
 # Edge case: manually set battlers to 0 in metadata_A before closing
-- [ ] 0 battlers — verify log2(0) handled gracefully, no panic
+- [x] 0 battlers — verify log2(0) handled gracefully, no panic
 
 ---
 
 ## /league new-season
 # [meta_A + play_B + seas_C + mat_B] — Valid new season start (signups currently closed)
-- [ ] Non-organizer runs command — receives "admins only" ephemeral
-- [ ] Valid date — metadata season number incremented
-- [ ] Valid date — metadata signups set to true
-- [ ] Valid date — metadata start_date updated
-- [ ] Valid date — metadata current_round reset to 0
-- [ ] Valid date — current matches archived with status "archived"
-- [ ] Valid date — current_season matches cleared
-- [ ] Valid date — next_match_id reset to 1
-- [ ] Valid date — each player historical record updated from season standings
-- [ ] Valid date — last_decklist updated for battlers only
-- [ ] Valid date — seasons_played updated for each player
-- [ ] Valid date — old season.json archived to site/data/archive/season-X.json
-- [ ] Valid date — season.json reset to empty rounds and season_players
-- [ ] Valid date — all JSON files saved
-- [ ] Valid date — receives confirmation ephemeral
-- [ ] Valid date — season opening announcement posted with @everyone ping
+- [x] Non-organizer runs command — receives "admins only" ephemeral
+- [x] Valid date — metadata season number incremented
+- [x] Valid date — metadata signups set to true
+- [x] Valid date — metadata start_date updated
+- [x] Valid date — metadata current_round reset to 0
+- [x] Valid date — current matches archived with status "archived"
+- [x] Valid date — current_season matches cleared
+- [x] Valid date — next_match_id reset to 1
+- [x] Valid date — each player historical record updated from season standings
+- [x] Valid date — last_decklist updated for battlers only
+- [x] Valid date — seasons_played updated for each player
+- [x] Valid date — old season.json archived to site/data/archive/season-X.json
+- [x] Valid date — season.json reset to empty rounds and season_players
+- [x] Valid date — all JSON files saved
+- [x] Valid date — receives confirmation ephemeral
+- [x] Valid date — season opening announcement posted with @everyone ping
 
 # [meta_A + play_B + seas_C + mat_B] — Invalid inputs
-- [ ] Invalid date format — receives date format error, no data changed
-- [ ] Signups currently open — receives "league already open" ephemeral
+- [x] Invalid date format — receives date format error, no data changed
+- [x] Signups currently open — receives "league already open" ephemeral
 
 # Edge case: player in season.json but NOT in players.json
 - [ ] Manually remove one player from players_B before loading — verify graceful handling, no panic

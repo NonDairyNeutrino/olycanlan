@@ -16,15 +16,27 @@
 <table>
     <tr>
         <th>Player</th>
-        <th>Points</th>
         <th>Record</th>
+        <th>Points</th>
     </tr>
     
-    {{ range .Site.Data.players.current_season.battlers }}
+    {{ range $playerID, $player := .Site.Data.season.season_players }}
     <tr>
-        <td>{{.discord_nickname}}</td>
-        <td>{{.points}}</td>
-        <td>{{.league_record}}</td>
+        <td>
+            {{ with index $.Site.Data.players.players $playerID }}
+                {{ .discord_nickname }}
+            {{ else }}
+                {{ $playerID }}
+            {{ end }}
+        </td>
+
+        <td>
+            {{ $player.standings.wins }}-{{ $player.standings.losses }}
+        </td>
+
+        <td>
+            {{ $player.standings.points }}
+        </td>
     </tr>
-    {{end}}
+    {{ end }}
 </table>
