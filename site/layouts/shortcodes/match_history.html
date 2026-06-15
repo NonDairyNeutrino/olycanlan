@@ -20,19 +20,36 @@
         <th>Match Result</th>
         <th>Bounty?</th>
     </tr>
-    
-    {{ range .Site.Data.matches.current_season.matches }}
-    <tr>
-        <td>{{.winner}}</td>
-        <td>{{.loser}}</td>
-        <td>{{.result}}</td>
-        <td>
-            {{ if .bounty }}
-                Yes
-            {{ else }}
-                No
-            {{ end }}
-        </td>
-    </tr>
-    {{end}}
+   
+{{ $players := .Site.Data.players.players }}
+
+{{ range .Site.Data.matches.current_season.matches }}
+<tr>
+    <td>
+        {{ with index $players .winner }}
+            {{ .discord_nickname }}
+        {{ else }}
+            {{ .winner }}
+        {{ end }}
+    </td>
+
+    <td>
+        {{ with index $players .loser }}
+            {{ .discord_nickname }}
+        {{ else }}
+            {{ .loser }}
+        {{ end }}
+    </td>
+
+    <td>{{ .result }}</td>
+
+    <td>
+        {{ if .bounty }}
+            Yes
+        {{ else }}
+            No
+        {{ end }}
+    </td>
+</tr>
+{{ end }}  
 </table>
