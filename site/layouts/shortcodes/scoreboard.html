@@ -1,27 +1,24 @@
 <head>
     <style>
         table {
-        border-collapse: collapse;
-        width: 100%;
+            border-collapse: collapse;
+            width: 100%;
         }
-
         tr {
-        border-bottom: 1px solid #818181;
+            border-bottom: 1px solid #818181;
         }
-
-        tr:hover {background-color: #9bbea0;}
+        tr:hover { background-color: #9bbea0; }
     </style>
 </head>
 
-{{ $players := .Site.Data.season.season_players }}
+{{ $players := hugo.Data.season.season_players }}
 
 {{ $sorted := slice }}
 {{ range $playerID, $player := $players }}
-    {{ $entry := dict "id" $playerID "player" $player "wins" $player.standings.wins "points" $player.standings.points }}
-    {{ $sorted = $sorted | append $entry }}
-{{ if eq $player.role "battler" }}
-    {{ $entry := dict ... }}
-    {{ $sorted = $sorted | append $entry }}    
+    {{ if eq $player.role "battler" }}
+        {{ $entry := dict "id" $playerID "player" $player "wins" $player.standings.wins "points" $player.standings.points }}
+        {{ $sorted = $sorted | append $entry }}
+    {{ end }}
 {{ end }}
 
 {{ $sorted = sort $sorted "points" "desc" }}
