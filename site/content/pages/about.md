@@ -6,4 +6,4 @@ comments: false
 
 ## League Info
 
-Current season: {{ .Site.Data.metadata.current_season.season }}
+Current season: {{ hugo.Data.metadata.current_season.season }}
