@@ -7,3 +7,5 @@ comments: false
 ## League Info
 
 Current season: {{ hugo.Data.metadata.current_season.season }}
+
+{{< points_embed >}}
