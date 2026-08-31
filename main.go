@@ -660,9 +660,6 @@ func main() {
 		switch i.ApplicationCommandData().Name {
 		case "result":
 
-			//TODO: Check when a bounty match is reported if another bounty was already reported.
-			//TODO: Check when a bounty match is reported if its ACTUALLY a bounty match (pairings).
-
 			//check if user is allowed to complete command
 			allowedRoles := []string{
 				os.Getenv("BATTLER_ID"),
@@ -1173,6 +1170,7 @@ func main() {
 						os.Getenv("ADMIN_CHNL_ID"),
 						fmt.Sprintf("<@&%v> - Bot failed to retrieve <@%v>'s player data for decklist submission.\nThey either incorrectly have the Battler ⚔️ role, or their data has been corrupted.", os.Getenv("ORGANIZER_ID"), i.Member.User.ID),
 					)
+					botData.Mutex.Unlock()
 					return
 				}
 
@@ -1186,11 +1184,13 @@ func main() {
 				//if signupStatus is false and their currentDecklist was not submitted, let the user know.
 				if !signupStatus && currentDecklist == "Not Submitted" {
 					replyEphemeral(s, i, "Signups are currently closed for this season. It appears you do not have a submitted decklist. Please contact an organizer.")
+					botData.Mutex.Unlock()
 					return
 				}
 				//if signupStatus is false, let the user know and return including their submitted decklist.
 				if !signupStatus {
 					replyEphemeral(s, i, fmt.Sprintf("Signups are currently closed for this season. Please use the original decklist submitted:\n%v", currentDecklist))
+					botData.Mutex.Unlock()
 					return
 				}
 
@@ -1228,6 +1228,7 @@ func main() {
 				_, err := neturl.ParseRequestURI(url)
 				if err != nil {
 					replyEphemeral(s, i, fmt.Sprintf("The URL provided is invalid. Please resubmit `/signup decklist` with a valid URL.\n%v", url))
+					botData.Mutex.Unlock()
 					return
 				}
 
@@ -1754,6 +1755,7 @@ func main() {
 
 				if currentRound == seasonMeta["total_rounds"] { //No need to make a new round if we are already on final round
 					replyEphemeral(s, i, "The bot's records show that an additional round is not needed. Carry on 🍁!")
+					botData.Mutex.Lock()
 					return
 				}
 
@@ -1764,6 +1766,7 @@ func main() {
 
 					if roundStatus != "completed" { // Cannot generate a new round without completing the previous round
 						replyEphemeral(s, i, fmt.Sprintf("Round %v has not been completed in the bot's data.\nPlease use `/round close` to finalize the previous round.", currentRound))
+						botData.Mutex.Lock()
 						return
 					}
 				}
@@ -1993,6 +1996,7 @@ func main() {
 				err_load := loadSeason()
 				if err_load != nil {
 					log.Println("Error loading season data during round post")
+					botData.Mutex.Lock()
 					return
 				}
 
