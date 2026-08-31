@@ -1,0 +1,181 @@
+/* -----------------------------------------------------------
+   Olympia Canadian Highlander League — brand overrides
+   Matches the bot's "Canadian Flag Red" embed color (#D80621)
+   ----------------------------------------------------------- */
+
+:root {
+    --ocl-red: #D80621;
+    --ocl-red-dark: #a30419;
+    --ocl-ink: #1c1c1c;
+    --ocl-paper: #fafafa;
+    --ocl-line: #e0e0e0;
+    --ocl-gold: #c9a227;
+}
+
+/* Site header / nav bar */
+.bg-black {
+    background-color: var(--ocl-ink) !important;
+}
+
+nav a,
+.ananke-socials a {
+    transition: color 0.15s ease-in-out;
+}
+
+nav a:hover {
+    color: var(--ocl-red) !important;
+}
+
+/* Headings pick up the brand red for a bit of punch */
+article h1.f1,
+.page-header h1 {
+    border-left: 6px solid var(--ocl-red);
+    padding-left: 0.6rem;
+}
+
+h2, h3 {
+    color: var(--ocl-ink);
+}
+
+a {
+    color: var(--ocl-red-dark);
+}
+
+a:hover {
+    color: var(--ocl-red);
+}
+
+/* -----------------------------------------------------------
+   Shared table styling used by the standings/records/decklist/
+   match-history shortcodes
+   ----------------------------------------------------------- */
+
+.ocl-table-wrap {
+    overflow-x: auto;
+    margin: 1.5rem 0;
+}
+
+table.ocl-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.95rem;
+    background: var(--ocl-paper);
+}
+
+table.ocl-table caption {
+    text-align: left;
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    color: var(--ocl-ink);
+}
+
+table.ocl-table th {
+    background-color: var(--ocl-ink);
+    color: #fff;
+    text-align: left;
+    padding: 0.6rem 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+table.ocl-table td {
+    padding: 0.55rem 0.8rem;
+    border-bottom: 1px solid var(--ocl-line);
+    vertical-align: middle;
+}
+
+table.ocl-table tbody tr:nth-child(odd) {
+    background-color: #f2f2f2;
+}
+
+table.ocl-table tbody tr:hover {
+    background-color: #f5d9dd;
+}
+
+table.ocl-table td.ocl-num,
+table.ocl-table th.ocl-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Rank badges for top 3 in standings/records */
+.ocl-rank {
+    display: inline-block;
+    min-width: 1.6em;
+    text-align: center;
+    font-weight: 700;
+}
+.ocl-rank-1 { color: var(--ocl-gold); }
+.ocl-rank-2 { color: #8a8a8a; }
+.ocl-rank-3 { color: #a0522d; }
+
+/* Status pills (approved / pending, bounty / non-bounty, etc.) */
+.ocl-pill {
+    display: inline-block;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+.ocl-pill-green { background: #e3f5e6; color: #1f7a34; }
+.ocl-pill-red   { background: #fbe3e6; color: var(--ocl-red-dark); }
+.ocl-pill-gray  { background: #eee; color: #666; }
+.ocl-pill-gold  { background: #faf1d6; color: #8a6d1a; }
+
+/* Section intro note under an <h2>, used to add a one-line caption */
+.ocl-note {
+    color: #666;
+    font-size: 0.95rem;
+    margin-top: -0.75rem;
+    margin-bottom: 1rem;
+}
+
+/* Simple card grid for the homepage quick links */
+.ocl-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0 2rem;
+}
+
+.ocl-card {
+    display: block;
+    border: 1px solid var(--ocl-line);
+    border-top: 4px solid var(--ocl-red);
+    border-radius: 6px;
+    padding: 1rem 1.1rem;
+    background: #fff;
+    text-decoration: none !important;
+    color: var(--ocl-ink) !important;
+    transition: box-shadow 0.15s ease-in-out, transform 0.15s ease-in-out;
+}
+
+.ocl-card:hover {
+    box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+    transform: translateY(-2px);
+}
+
+.ocl-card h3 {
+    margin: 0 0 0.35rem;
+    font-size: 1.1rem;
+    color: var(--ocl-red-dark);
+}
+
+.ocl-card p {
+    margin: 0;
+    font-size: 0.92rem;
+    color: #555;
+}
+
+/* Slash-command reference styling on the commands page */
+code.ocl-cmd {
+    background: var(--ocl-ink);
+    color: #fff;
+    padding: 0.1rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.9em;
+}

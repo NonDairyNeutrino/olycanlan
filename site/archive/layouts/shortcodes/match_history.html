@@ -1,0 +1,55 @@
+<head>
+    <style>
+        table {
+        border-collapse: collapse;
+        width: 100%;
+        }
+
+        tr {
+        border-bottom: 1px solid #818181;
+        }
+
+        tr:hover {background-color: #9bbea0;}
+    </style>
+</head>
+
+<table>
+    <tr>
+        <th>Winner</th>
+        <th>Loser</th>
+        <th>Match Result</th>
+        <th>Bounty?</th>
+    </tr>
+   
+{{ $players := .Site.Data.players.players }}
+
+{{ range .Site.Data.matches.current_season.matches }}
+<tr>
+    <td>
+        {{ with index $players .winner }}
+            {{ .discord_nickname }}
+        {{ else }}
+            {{ .winner }}
+        {{ end }}
+    </td>
+
+    <td>
+        {{ with index $players .loser }}
+            {{ .discord_nickname }}
+        {{ else }}
+            {{ .loser }}
+        {{ end }}
+    </td>
+
+    <td>{{ .result }}</td>
+
+    <td>
+        {{ if .bounty }}
+            Yes
+        {{ else }}
+            No
+        {{ end }}
+    </td>
+</tr>
+{{ end }}  
+</table>

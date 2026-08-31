@@ -1,0 +1,95 @@
+{
+    "metadata": {
+        "last_updated": "2025-09-15T00:00:00Z"
+    },
+    "archive": {
+        "matches": {}
+    },
+    "current_season": {
+        "metadata": {
+            "next_match_id": 21
+        },
+        "matches": {
+            "S08-001": {
+                "winner": "1001", "loser": "1002", "result": "3-0",
+                "bounty": true, "msg_id": "111111111111111111", "status": "logged"
+            },
+            "S08-002": {
+                "winner": "1003", "loser": "1004", "result": "2-1",
+                "bounty": true, "msg_id": "111111111111111112", "status": "logged"
+            },
+            "S08-003": {
+                "winner": "1005", "loser": "1006", "result": "3-0",
+                "bounty": true, "msg_id": "111111111111111113", "status": "logged"
+            },
+            "S08-004": {
+                "winner": "1007", "loser": "1008", "result": "2-1",
+                "bounty": true, "msg_id": "111111111111111114", "status": "logged"
+            },
+            "S08-005": {
+                "winner": "1009", "loser": "1010", "result": "3-0",
+                "bounty": true, "msg_id": "111111111111111115", "status": "logged"
+            },
+            "S08-006": {
+                "winner": "1011", "loser": "1012", "result": "2-1",
+                "bounty": true, "msg_id": "111111111111111116", "status": "logged"
+            },
+            "S08-007": {
+                "winner": "1014", "loser": "1013", "result": "3-0",
+                "bounty": true, "msg_id": "111111111111111117", "status": "logged"
+            },
+            "S08-008": {
+                "winner": "1015", "loser": "1016", "result": "2-1",
+                "bounty": true, "msg_id": "111111111111111118", "status": "logged"
+            },
+            "S08-009": {
+                "winner": "1001", "loser": "1003", "result": "3-0",
+                "bounty": true, "msg_id": "111111111111111119", "status": "logged"
+            },
+            "S08-010": {
+                "winner": "1005", "loser": "1007", "result": "2-1",
+                "bounty": true, "msg_id": "111111111111111120", "status": "logged"
+            },
+            "S08-011": {
+                "winner": "1009", "loser": "1011", "result": "3-0",
+                "bounty": true, "msg_id": "111111111111111121", "status": "logged"
+            },
+            "S08-012": {
+                "winner": "1014", "loser": "1015", "result": "2-1",
+                "bounty": true, "msg_id": "111111111111111122", "status": "logged"
+            },
+            "S08-013": {
+                "winner": "1004", "loser": "1002", "result": "3-0",
+                "bounty": true, "msg_id": "111111111111111123", "status": "logged"
+            },
+            "S08-014": {
+                "winner": "1008", "loser": "1006", "result": "2-1",
+                "bounty": true, "msg_id": "111111111111111124", "status": "logged"
+            },
+            "S08-015": {
+                "winner": "1012", "loser": "1010", "result": "3-0",
+                "bounty": true, "msg_id": "111111111111111125", "status": "logged"
+            },
+            "S08-016": {
+                "winner": "1013", "loser": "1016", "result": "2-1",
+                "bounty": true, "msg_id": "111111111111111126", "status": "logged"
+            },
+            "S08-017": {
+                "winner": "1003", "loser": "1007", "result": "3-0",
+                "bounty": true, "msg_id": "111111111111111127", "status": "active"
+            },
+            "S08-018": {
+                "winner": "1004", "loser": "1008", "result": "2-1",
+                "bounty": true, "msg_id": "111111111111111128", "status": "active"
+            },
+            "S08-019": {
+                "winner": "1011", "loser": "1013", "result": "3-0",
+                "bounty": true, "msg_id": "111111111111111129", "status": "active"
+            },
+            "S08-020": {
+                "winner": "1012", "loser": "1015", "result": "2-1",
+                "bounty": true, "msg_id": "111111111111111130", "status": "voided"
+            }
+        }
+    }
+}

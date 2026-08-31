@@ -1,0 +1,87 @@
+{{ $players := hugo.Data.season.season_players }}
+{{ $playerDirectory := hugo.Data.players.players }}
+{{ $meta := hugo.Data.metadata.current_season }}
+
+{{ $battlers := slice }}
+{{ $jammers := slice }}
+
+{{ range $playerID, $player := $players }}
+    {{ $entry := dict "id" $playerID "player" $player }}
+    {{ if eq $player.role "battler" }}
+        {{ $battlers = $battlers | append $entry }}
+    {{ else if eq $player.role "jammer" }}
+        {{ $jammers = $jammers | append $entry }}
+    {{ end }}
+{{ end }}
+
+{{/* Sort by points, then by wins, both descending */}}
+{{ $battlers = sort $battlers "player.standings.wins" "desc" }}
+{{ $battlers = sort $battlers "player.standings.points" "desc" }}
+
+<p class="ocl-note">
+    Season {{ $meta.season }} &middot; Round {{ $meta.current_round }} of {{ $meta.total_rounds }}
+    {{ if $meta.signups }} &middot; Signups are currently <strong>open</strong>{{ end }}
+</p>
+
+<div class="ocl-table-wrap">
+<table class="ocl-table">
+    <caption>Battlers ⚔️</caption>
+    <tr>
+        <th>#</th>
+        <th>Player</th>
+        <th class="ocl-num">Record</th>
+        <th class="ocl-num">Game W-L</th>
+        <th class="ocl-num">Points</th>
+        <th>Decklist</th>
+    </tr>
+    {{ range $i, $e := $battlers }}
+        {{ $playerID := $e.id }}
+        {{ $player := $e.player }}
+        <tr>
+            <td>
+                {{ $rank := add $i 1 }}
+                {{ if eq $rank 1 }}<span class="ocl-rank ocl-rank-1">🥇</span>
+                {{ else if eq $rank 2 }}<span class="ocl-rank ocl-rank-2">🥈</span>
+                {{ else if eq $rank 3 }}<span class="ocl-rank ocl-rank-3">🥉</span>
+                {{ else }}<span class="ocl-rank">{{ $rank }}</span>{{ end }}
+            </td>
+            <td>
+                {{ with index $playerDirectory $playerID }}{{ .discord_nickname }}{{ else }}{{ $playerID }}{{ end }}
+                {{ if $player.received_bye }}<span class="ocl-pill ocl-pill-gray" title="Received a bye this season">BYE</span>{{ end }}
+            </td>
+            <td class="ocl-num">{{ $player.standings.wins }}-{{ $player.standings.losses }}</td>
+            <td class="ocl-num">{{ $player.standings.game_wins }}-{{ $player.standings.game_losses }}</td>
+            <td class="ocl-num">{{ $player.standings.points }}</td>
+            <td>
+                {{ if $player.decklist.approved }}
+                    <a href="{{ $player.decklist.url }}" target="_blank" rel="noopener">{{ $player.decklist.name | default "View" }}</a>
+                    <span class="ocl-pill ocl-pill-green">Approved</span>
+                {{ else if ne $player.decklist.url "Not Submitted" }}
+                    <span class="ocl-pill ocl-pill-gold">Pending Review</span>
+                {{ else }}
+                    <span class="ocl-pill ocl-pill-red">Not Submitted</span>
+                {{ end }}
+            </td>
+        </tr>
+    {{ end }}
+</table>
+</div>
+
+{{ if $jammers }}
+<div class="ocl-table-wrap">
+<table class="ocl-table">
+    <caption>Jammers 👊</caption>
+    <tr>
+        <th>Player</th>
+        <th>Status</th>
+    </tr>
+    {{ range $e := $jammers }}
+        {{ $playerID := $e.id }}
+        <tr>
+            <td>{{ with index $playerDirectory $playerID }}{{ .discord_nickname }}{{ else }}{{ $playerID }}{{ end }}</td>
+            <td><span class="ocl-pill ocl-pill-gray">Casual / Non-competitive</span></td>
+        </tr>
+    {{ end }}
+</table>
+</div>
+{{ end }}

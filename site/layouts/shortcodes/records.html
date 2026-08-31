@@ -1,0 +1,62 @@
+{{ $players := hugo.Data.players.players }}
+
+{{ $rows := slice }}
+{{ range $playerID, $player := $players }}
+    {{ $hist := $player.historical_record }}
+    {{ $totalGames := add $hist.wins $hist.losses }}
+    {{ if gt $totalGames 0 }}
+        {{ $winPct := mul (div (float $hist.wins) (float $totalGames)) 100 }}
+        {{ $entry := dict "id" $playerID "player" $player "winPct" $winPct "totalGames" $totalGames }}
+        {{ $rows = $rows | append $entry }}
+    {{ end }}
+{{ end }}
+
+{{ $rows = sort $rows "player.historical_record.wins" "desc" }}
+{{ $rows = sort $rows "winPct" "desc" }}
+
+<p class="ocl-note">All-time league records across every completed season. Sorted by win percentage, then total wins.</p>
+
+<div class="ocl-table-wrap">
+<table class="ocl-table">
+    <tr>
+        <th>#</th>
+        <th>Player</th>
+        <th class="ocl-num">Record</th>
+        <th class="ocl-num">Win %</th>
+        <th class="ocl-num">Game W-L</th>
+        <th>Seasons Played</th>
+        <th>Last Decklist</th>
+    </tr>
+    {{ range $i, $e := $rows }}
+        {{ $player := $e.player }}
+        {{ $hist := $player.historical_record }}
+        <tr>
+            <td>
+                {{ $rank := add $i 1 }}
+                {{ if eq $rank 1 }}<span class="ocl-rank ocl-rank-1">🥇</span>
+                {{ else if eq $rank 2 }}<span class="ocl-rank ocl-rank-2">🥈</span>
+                {{ else if eq $rank 3 }}<span class="ocl-rank ocl-rank-3">🥉</span>
+                {{ else }}<span class="ocl-rank">{{ $rank }}</span>{{ end }}
+            </td>
+            <td>{{ $player.discord_nickname }}</td>
+            <td class="ocl-num">{{ $hist.wins }}-{{ $hist.losses }}</td>
+            <td class="ocl-num">{{ printf "%.1f" $e.winPct }}%</td>
+            <td class="ocl-num">{{ $hist.game_wins }}-{{ $hist.game_losses }}</td>
+            <td>
+                {{ if $player.seasons_played }}
+                    {{ delimit $player.seasons_played ", " }}
+                {{ else }}
+                    <span class="ocl-pill ocl-pill-gray">None yet</span>
+                {{ end }}
+            </td>
+            <td>
+                {{ if and $player.last_decklist.url (ne $player.last_decklist.url "") }}
+                    <a href="{{ $player.last_decklist.url }}" target="_blank" rel="noopener">{{ $player.last_decklist.name | default "View" }}</a>
+                {{ else }}
+                    &mdash;
+                {{ end }}
+            </td>
+        </tr>
+    {{ end }}
+</table>
+</div>

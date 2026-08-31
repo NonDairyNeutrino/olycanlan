@@ -1,0 +1,57 @@
+{{ $players := hugo.Data.season.season_players }}
+{{ $playerDirectory := hugo.Data.players.players }}
+{{ $meta := hugo.Data.metadata.current_season }}
+
+{{ $rows := slice }}
+{{ range $playerID, $player := $players }}
+    {{ if eq $player.role "battler" }}
+        {{ $entry := dict "id" $playerID "player" $player }}
+        {{ $rows = $rows | append $entry }}
+    {{ end }}
+{{ end }}
+
+{{ $rows = sort $rows "player.decklist.name" }}
+
+<p class="ocl-note">Decklists submitted by Battlers ⚔️ for Season {{ $meta.season }}. Pending decks are awaiting organizer review.</p>
+
+<div class="ocl-table-wrap">
+<table class="ocl-table">
+    <tr>
+        <th>Player</th>
+        <th>Deck Name</th>
+        <th>Status</th>
+        <th>Link</th>
+    </tr>
+    {{ range $e := $rows }}
+        {{ $playerID := $e.id }}
+        {{ $player := $e.player }}
+        {{ $deck := $player.decklist }}
+        <tr>
+            <td>{{ with index $playerDirectory $playerID }}{{ .discord_nickname }}{{ else }}{{ $playerID }}{{ end }}</td>
+            <td>
+                {{ if ne $deck.url "Not Submitted" }}
+                    {{ $deck.name | default "Untitled" }}
+                {{ else }}
+                    &mdash;
+                {{ end }}
+            </td>
+            <td>
+                {{ if eq $deck.url "Not Submitted" }}
+                    <span class="ocl-pill ocl-pill-red">Not Submitted</span>
+                {{ else if $deck.approved }}
+                    <span class="ocl-pill ocl-pill-green">Approved</span>
+                {{ else }}
+                    <span class="ocl-pill ocl-pill-gold">Pending Review</span>
+                {{ end }}
+            </td>
+            <td>
+                {{ if ne $deck.url "Not Submitted" }}
+                    <a href="{{ $deck.url }}" target="_blank" rel="noopener">View Decklist</a>
+                {{ else }}
+                    &mdash;
+                {{ end }}
+            </td>
+        </tr>
+    {{ end }}
+</table>
+</div>

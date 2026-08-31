@@ -1,55 +1,52 @@
-<head>
-    <style>
-        table {
-        border-collapse: collapse;
-        width: 100%;
-        }
+{{ $playerDirectory := hugo.Data.players.players }}
+{{ $matches := hugo.Data.matches.current_season.matches }}
 
-        tr {
-        border-bottom: 1px solid #818181;
-        }
+{{ $rows := slice }}
+{{ range $matchID, $match := $matches }}
+    {{ if ne $match.status "voided" }}
+        {{ $entry := dict "id" $matchID "match" $match }}
+        {{ $rows = $rows | append $entry }}
+    {{ end }}
+{{ end }}
 
-        tr:hover {background-color: #9bbea0;}
-    </style>
-</head>
+{{ $rows = sort $rows "id" "desc" }}
 
-<table>
+<p class="ocl-note">Most recent match reports first. Voided matches are omitted.</p>
+
+<div class="ocl-table-wrap">
+<table class="ocl-table">
     <tr>
+        <th>Match ID</th>
         <th>Winner</th>
         <th>Loser</th>
-        <th>Match Result</th>
-        <th>Bounty?</th>
+        <th class="ocl-num">Result</th>
+        <th>Bounty</th>
+        <th>Status</th>
     </tr>
-   
-{{ $players := .Site.Data.players.players }}
-
-{{ range .Site.Data.matches.current_season.matches }}
-<tr>
-    <td>
-        {{ with index $players .winner }}
-            {{ .discord_nickname }}
-        {{ else }}
-            {{ .winner }}
-        {{ end }}
-    </td>
-
-    <td>
-        {{ with index $players .loser }}
-            {{ .discord_nickname }}
-        {{ else }}
-            {{ .loser }}
-        {{ end }}
-    </td>
-
-    <td>{{ .result }}</td>
-
-    <td>
-        {{ if .bounty }}
-            Yes
-        {{ else }}
-            No
-        {{ end }}
-    </td>
-</tr>
-{{ end }}  
+    {{ range $e := $rows }}
+        {{ $match := $e.match }}
+        <tr>
+            <td>{{ $e.id }}</td>
+            <td>{{ with index $playerDirectory $match.winner }}{{ .discord_nickname }}{{ else }}{{ $match.winner }}{{ end }}</td>
+            <td>{{ with index $playerDirectory $match.loser }}{{ .discord_nickname }}{{ else }}{{ $match.loser }}{{ end }}</td>
+            <td class="ocl-num">{{ $match.result }}</td>
+            <td>
+                {{ if $match.bounty }}
+                    <span class="ocl-pill ocl-pill-gold">Bounty</span>
+                {{ else }}
+                    <span class="ocl-pill ocl-pill-gray">Standard</span>
+                {{ end }}
+            </td>
+            <td>
+                {{ if eq $match.status "logged" }}
+                    <span class="ocl-pill ocl-pill-green">Logged</span>
+                {{ else if eq $match.status "edited" }}
+                    <span class="ocl-pill ocl-pill-gold">Edited</span>
+                {{ else }}
+                    <span class="ocl-pill ocl-pill-gray">{{ $match.status | title }}</span>
+                {{ end }}
+            </td>
+        </tr>
+    {{ end }}
 </table>
+</div>
