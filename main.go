@@ -34,7 +34,7 @@ var botData BotData
 
 // functions for loading .json data at bot startup
 func loadMetadata() error {
-	data, err := os.ReadFile("site/data/metadata.json")
+	data, err := os.ReadFile("site/data/metadata.jsosn")
 	if err != nil {
 		return err
 	}
